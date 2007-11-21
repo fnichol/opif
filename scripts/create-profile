@@ -1,0 +1,59 @@
+#!/usr/bin/perl
+
+# $Id$
+
+use strict;
+use warnings;
+use File::Basename;
+
+if ($#ARGV + 1 != 1 && $#ARGV + 1 != 2) {
+	print "usage: create.profile.pl <filename> [<outputfile>]\n";
+	exit 1;
+}
+
+my $profile = $ARGV[0];
+my $profile_dir = dirname($profile);
+
+my $output;
+if ($#ARGV + 1 == 2) {
+	open(OUTFILE, ">", "$ARGV[1]");
+	$output = *OUTFILE;
+}
+else {
+	$output = *STDOUT;
+}
+
+process_profile($profile);
+
+if ($#ARGV + 1 == 2) {
+	close(OUTFILE);
+}
+
+sub process_profile {
+	my $profile = shift(@_);
+	open(my $filehandle, "<", $profile) or die "Cannot find profile $profile\n";
+	while(<$filehandle>)
+	{
+		if (/^\@include[ \t]+.+$/) { 
+			chomp;
+			my @include_line = split(/[ \t]+/);
+			my $include_file = $profile_dir . '/' . $include_line[1];
+			process_profile($include_file);
+		}
+		elsif ($_ !~ /^#[ \t]*\$Id[:\$]/) { 
+			print $output "$_";
+		}
+	}
+	close($filehandle);
+}
+
+__END__
+
+=head1 NAME
+
+create.profile - something
+
+=head1 SYNOPSIS
+
+create.proile [OPTION] .. [OPERAND] ..
+
