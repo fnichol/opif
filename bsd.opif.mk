@@ -63,6 +63,7 @@ PROFDIR ?= ${.CURDIR}/profiles
 SCRIPTSDIR ?= ${.CURDIR}/scripts
 PROFFULLDIR := ${PROFDIR}
 WRKDIR ?= ${.CURDIR}/w-sets
+FAKEDIR ?= ${WRKDIR}/fake
 
 
 .if defined(P)
@@ -80,7 +81,6 @@ ${PROFILE}_PLIST_SOURCES != ${SCRIPTSDIR}/find-profile-frags ${PLIST_FILE}
 PROFILE_NORM = ${WRKDIR}/${PROFILE}.profile
 PLIST_NORM = ${WRKDIR}/${PROFILE}.plist
 
-FAKEDIR ?= ${WRKDIR}/fake-${PROFILE}
 
 _WRKDIR_COOKIE = ${WRKDIR}/.wrkdir_done
 
@@ -95,6 +95,41 @@ _CREATE_PLIST = ${SCRIPTSDIR}/create-profile ${PLIST_FILE}
 
 # Used to print all the '===>' style prompts -- override this to turn them off
 ECHO_MSG ?= ${ECHO}
+
+.if defined(verbose-show)
+.MAIN: verbose-show
+.elif defined(show)
+.MAIN: show
+.elif defined(clean)
+.MAIN: clean
+.elif defined(_internal-clean)
+clean = ${_internal-clean}
+.MAIN: _internal-clean
+.else
+.MAIN: all
+.endif
+
+# need to go through an extra var because clean is set in stone,
+# on the cmdline.
+_clean = ${clean}
+.if empty(_clean)
+_clean += work
+.endif
+.if ${_clean:L:Mwork}
+_clean += fake
+.endif
+# check that clean is clean
+_okay_words = work fake dist packages
+.for _w in ${_clean:L}
+.  if !${_okay_words:M${_w}}
+ERRORS += "Fatal: unknown clean command: ${_w}"
+.  endif
+.endfor
+
+# Top-level targets redirect to the real _internal-target
+.for _t in build clean
+${_t}: _internal-${_t}
+.endfor
 
 
 ${_WRKDIR_COOKIE}:
@@ -114,7 +149,7 @@ ${PLIST_NORM}: ${_WRKDIR_COOKIE} ${${PROFILE}_PLIST_SOURCES}
 	@${ECHO_MSG} "===> Creating normalized plist for ${PROFILE}"
 	@${_CREATE_PLIST} > $@
 
-build:
+_internal-build:
 	@cd ${.CURDIR} && exec ${MAKE} _check-profile PROFILE=${PROFILE}
 	@cd ${.CURDIR} && exec ${MAKE} ${PROFILE_NORM} PROFILE=${PROFILE}
 	@cd ${.CURDIR} && exec ${MAKE} ${PLIST_NORM} PROFILE=${PROFILE}
@@ -139,3 +174,27 @@ _check-profile:
 		exit 1; \
 	fi
 .endif
+
+
+#####################################################
+# Cleaning up
+#####################################################
+_internal-clean:
+	@${ECHO_MSG} "===>  Cleaning"
+.if ${_clean:L:Mwork}
+	@if [ -L ${WRKDIR} ]; then ${RM} -rf `readlink ${WRKDIR}`; fi
+	@${RM} -rf ${WRKDIR}
+.endif
+.if ${_clean:L:Mfake}
+.  if defined(PROFILE)
+	@cd ${.CURDIR} && exec ${MAKE} _check-profile PROFILE=${PROFILE}
+	@${RM} -rf ${FAKEDIR}/${PROFILE}
+.  else
+	@${RM} -rf ${FAKEDIR}
+.  endif
+.endif
+.if ${_clean:L:Mpackages}
+	@${ECHO_MSG} "===>  Packages cleaning"
+	@${RM} -rf ${PACKAGE_REPOSITORY}
+.endif
+
