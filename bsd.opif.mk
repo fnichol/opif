@@ -81,6 +81,12 @@ ${PROFILE}_PLIST_SOURCES != ${SCRIPTSDIR}/find-profile-frags ${PLIST_FILE}
 PROFILE_NORM = ${WRKDIR}/${PROFILE}.profile
 PLIST_NORM = ${WRKDIR}/${PROFILE}.plist
 
+_PROFILE_FILES != \
+	${FIND} ${PROFFULLDIR} -type f -name '*.profile' -print | \
+	${AWK} -F'/' '{ print $$NF }' | ${SORT}
+PROFILE_FILES = ${_PROFILE_FILES:T}
+PROFILES = ${PROFILE_FILES:C/\.profile$//}
+
 
 _WRKDIR_COOKIE = ${WRKDIR}/.wrkdir_done
 
@@ -198,3 +204,14 @@ _internal-clean:
 	@${RM} -rf ${PACKAGE_REPOSITORY}
 .endif
 
+#####################################################
+# Convenience targets
+#####################################################
+_internal-list-profiles:
+	@${ECHO_MSG} "===> Listing profiles";
+	@for file in ${PROFILES}; do\
+		${ECHO_MSG} "$$file"; \
+	done
+
+list-profiles:
+	@cd ${.CURDIR} && exec ${MAKE} _internal-list-profiles
