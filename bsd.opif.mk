@@ -69,32 +69,73 @@ WRKDIR ?= ${.CURDIR}/w-sets
 PROFILE = ${P}
 .endif
 
-.if defined(PROFILE)
-.  if exists(${PROFDIR}/${PROFILE}.profile)
+.if defined(PROFILE) && exists(${PROFDIR}/${PROFILE}.profile)
 PROFILE_FILE != ${FIND} ${PROFFULLDIR} -type f -name ${PROFILE}.profile
+PLIST_FILE != ${FIND} ${PROFFULLDIR} -type f -name ${PROFILE}.plist
 
 ${PROFILE}_SOURCES != ${SCRIPTSDIR}/find-profile-frags ${PROFILE_FILE}
+${PROFILE}_PLIST_SOURCES != ${SCRIPTSDIR}/find-profile-frags ${PLIST_FILE}
+.endif
 
 PROFILE_NORM = ${WRKDIR}/${PROFILE}.profile
-.  endif
-.endif
+PLIST_NORM = ${WRKDIR}/${PROFILE}.plist
 
 FAKEDIR ?= ${WRKDIR}/fake-${PROFILE}
 
+_WRKDIR_COOKIE = ${WRKDIR}/.wrkdir_done
 
-CREATE_PROFILE = ${SCRIPTSDIR}/create-profile ${PROFILE_FILE}
+
+#
+# Common commands and operations
+#
+_MAKE_COOKIE = ${TOUCH}
+
+_CREATE_PROFILE = ${SCRIPTSDIR}/create-profile ${PROFILE_FILE}
+_CREATE_PLIST = ${SCRIPTSDIR}/create-profile ${PLIST_FILE}
+
+# Used to print all the '===>' style prompts -- override this to turn them off
+ECHO_MSG ?= ${ECHO}
 
 
-test:
-	@echo "PROFDIR is [${PROFDIR}]"
-	@echo "PROFFULLDIR is [${PROFFULLDIR}]"
-	@echo "WRKDIR is [${WRKDIR}]"
-	@echo "PROFILE is [${PROFILE}]"
-	@echo "PROFILE_FILE is [${PROFILE_FILE}]"
-	@echo "FAKEDIR is [${FAKEDIR}]"
-	@echo "${PROFILE}_source is [${${PROFILE}_SOURCES}]"
+${_WRKDIR_COOKIE}:
+	@${RM} -rf ${WRKDIR}
+	@${MKDIR} -p ${WRKDIR}
+	@${_MAKE_COOKIE} $@
 
-${PROFILE_NORM}: ${${PROFILE}_SOURCES}
-	@echo "i need rebuilding: ${PROFILE_NORM}"
-	@mkdir -p ${WRKDIR}
-	${CREATE_PROFILE} > $@
+
+#####################################################
+# Building a normalized .profile and .plist
+#####################################################
+${PROFILE_NORM}: ${_WRKDIR_COOKIE} ${${PROFILE}_SOURCES}
+	@${ECHO_MSG} "===> Creating normalized profile for ${PROFILE}"
+	@${_CREATE_PROFILE} > $@
+
+${PLIST_NORM}: ${_WRKDIR_COOKIE} ${${PROFILE}_PLIST_SOURCES}
+	@${ECHO_MSG} "===> Creating normalized plist for ${PROFILE}"
+	@${_CREATE_PLIST} > $@
+
+build:
+	@cd ${.CURDIR} && exec ${MAKE} _check-profile PROFILE=${PROFILE}
+	@cd ${.CURDIR} && exec ${MAKE} ${PROFILE_NORM} PROFILE=${PROFILE}
+	@cd ${.CURDIR} && exec ${MAKE} ${PLIST_NORM} PROFILE=${PROFILE}
+
+
+#####################################################
+# Checking for profile files existance
+#####################################################
+_check-profile:
+.if !defined(PROFILE) || ${PROFILE} == ""
+	@${ECHO_MSG}
+	@${ECHO_MSG} ">> Variable PROFILE (or P) not defined!"
+	@${ECHO_MSG} ">> usage: make PROFILE=<profile> <action>"
+	@exit 1
+.else
+	@if [ ! -e "${PROFILE_FILE}" -o ! -e "${PLIST_FILE}" ]; then \
+		${ECHO_MSG} ">> A profile with name \"${PROFILE}\" could not be found."; \
+		${ECHO_MSG} ">> To list all profiles, run: make list-profiles"; \
+		${ECHO_MSG} ">> Two files called ${PROFDIR}/${PROFILE}.profile and"; \
+		${ECHO_MSG} ">> ${PROFDIR}/${PROFILE}.plist must exist."; \
+		${ECHO_MSG}; \
+		exit 1; \
+	fi
+.endif
