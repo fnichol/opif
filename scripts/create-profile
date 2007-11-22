@@ -1,4 +1,4 @@
-#!/usr/bin/perl -wT
+#!/usr/bin/perl -w
 use strict;
 use warnings;
 
@@ -18,8 +18,7 @@ MAIN: {
 
 	if ( $#ARGV == 1 ) {
 		my $outputFile = $ARGV[1];
-		$outputFile =~ m/^([[:alnum:]\/]+)$/ or die "Bad output filename\n";
-		open(OUTFILE, ">$1");
+		open(OUTFILE, ">$outputFile");
 		$output = *OUTFILE;
 	}
 	else {
