@@ -1,0 +1,12 @@
+/set type=dir uname=root gname=wheel mode=0755
+.
+    etc
+    ..
+    var
+        db
+        ..
+        log  
+        ..
+        spool
+        ..
+        www type=dir uname=root gname=daemon mode=755
