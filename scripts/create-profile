@@ -1,59 +1,83 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -wT
+use strict;
+use warnings;
 
 # $Id$
 
-use strict;
-use warnings;
 use File::Basename;
 
-if ($#ARGV + 1 != 1 && $#ARGV + 1 != 2) {
-	print "usage: create.profile.pl <filename> [<outputfile>]\n";
+if ( $#ARGV > 1 ) {
+	&usage();
 	exit 1;
 }
 
-my $profile = $ARGV[0];
-my $profile_dir = dirname($profile);
-
 my $output;
-if ($#ARGV + 1 == 2) {
-	open(OUTFILE, ">", "$ARGV[1]");
-	$output = *OUTFILE;
-}
-else {
-	$output = *STDOUT;
+
+MAIN: {
+	my $inputFile = $ARGV[0];
+
+	if ( $#ARGV == 1 ) {
+		my $outputFile = $ARGV[1];
+		$outputFile =~ m/^([[:alnum:]\/]+)$/ or die "Bad output filename\n";
+		open(OUTFILE, ">$1");
+		$output = *OUTFILE;
+	}
+	else {
+		$output = *STDOUT;
+	}
+
+	&process_profile( $inputFile );
+
+	if ( $#ARGV == 1 ) {
+		close(OUTFILE);
+	}
 }
 
-process_profile($profile);
-
-if ($#ARGV + 1 == 2) {
-	close(OUTFILE);
+sub usage {
+	print "usage: " . basename( $0 ) . " <filename> [<outputfile>]\n";
 }
 
 sub process_profile {
-	my $profile = shift(@_);
-	open(my $filehandle, "<", $profile) or die "Cannot find profile $profile\n";
-	while(<$filehandle>)
+	my ( $inputFile ) = @_;
+
+	open( my $fileHandle, "<", $inputFile ) 
+		or die "Cannot find profile $inputFile\n";
+
+	while( <$fileHandle> )
 	{
-		if (/^\@include[ \t]+.+$/) { 
+		if ( /^\@include[ \t]+.+$/ ) { 
 			chomp;
 			my @include_line = split(/[ \t]+/);
-			my $include_file = $profile_dir . '/' . $include_line[1];
-			process_profile($include_file);
+			my $include_file = dirname( $inputFile ) . '/' . $include_line[1];
+			&process_profile( $include_file );
 		}
-		elsif ($_ !~ /^#[ \t]*\$Id[:\$]/) { 
+		elsif ( $_ !~ /^#[ \t]*\$Id[:\$]/ ) { 
 			print $output "$_";
 		}
 	}
-	close($filehandle);
+	close( $fileHandle );
 }
 
 __END__
 
 =head1 NAME
 
-create.profile - something
+create-profile - creates a normalized profile
 
 =head1 SYNOPSIS
 
-create.proile [OPTION] .. [OPERAND] ..
+B<create-profile> I<filename> [I<outputfile>]
 
+=head1 DESCRIPTION
+
+B<create-profile> takes a profile template containing @include tokens and 
+writes a normalized profile to the specified output file or on the standard 
+output.
+
+=head1 SEE ALSO
+
+perl(1)
+
+=head1 AUTHOR
+
+Fletcher Nichol
