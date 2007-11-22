@@ -56,14 +56,17 @@ UMOUNT = /sbin/umount
 UNAME = /usr/bin/uname
 XARGS = /usr/bin/xargs
 
+ARCH ?= ${MACHINE}
+
 #
 # Global path locations
 #
 PROFDIR ?= ${.CURDIR}/profiles
 SCRIPTSDIR ?= ${.CURDIR}/scripts
+PROFILE_MTREE ?= ${SCRIPTSDIR}/profile.mtree
 PROFFULLDIR := ${PROFDIR}
 WRKDIR ?= ${.CURDIR}/w-sets
-FAKEDIR ?= ${WRKDIR}/fake
+FAKEDIR ?= ${WRKDIR}/fake-${ARCH}
 
 
 .if defined(P)
@@ -87,8 +90,10 @@ _PROFILE_FILES != \
 PROFILE_FILES = ${_PROFILE_FILES:T}
 PROFILES = ${PROFILE_FILES:C/\.profile$//}
 
+WRKINST = ${FAKEDIR}/${PROFILE}
 
 _WRKDIR_COOKIE = ${WRKDIR}/.wrkdir_done
+_FAKE_MTREE_COOKIE = ${WRKDIR}/.${PROFILE}-fake_mtree_done
 
 
 #
@@ -166,6 +171,18 @@ _internal-build:
 	@cd ${.CURDIR} && exec ${MAKE} ${PROFILE_NORM} PROFILE=${PROFILE}
 	@cd ${.CURDIR} && exec ${MAKE} ${PLIST_NORM} PROFILE=${PROFILE}
 .endif
+
+
+#####################################################
+# 
+#####################################################
+${_FAKE_MTREE_COOKIE}:
+	@cd ${.CURDIR} && exec ${MAKE} _check-profile PROFILE=${PROFILE}
+	@${SUDO} install -d -m 755 -o root -g wheel ${WRKINST}
+	${CAT} ${PROFILE_MTREE} | \
+		${SUDO} /usr/sbin/mtree -U -e -d -n -p ${WRKINST} >/dev/null
+	@${_MAKE_COOKIE} $@
+
 
 
 #####################################################
