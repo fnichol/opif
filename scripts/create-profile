@@ -2,7 +2,12 @@
 use strict;
 use warnings;
 
+##
+# create-profile - creates a normalized profile
+#
+# Author: Fletcher Nichol
 # $Id$
+##
 
 use File::Basename;
 
@@ -12,6 +17,7 @@ if ( $#ARGV > 1 ) {
 }
 
 my $Output;
+
 
 MAIN: {
 	my $input_file = $ARGV[0];
@@ -32,9 +38,11 @@ MAIN: {
 	}
 }
 
+
 sub usage {
 	print "usage: " . basename( $0 ) . " <filename> [<outputfile>]\n";
 }
+
 
 sub process_profile {
 	my ( $input_file ) = @_;
@@ -58,6 +66,7 @@ sub process_profile {
 }
 
 __END__
+
 
 =head1 NAME
 
