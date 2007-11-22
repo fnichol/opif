@@ -11,21 +11,21 @@ if ( $#ARGV > 1 ) {
 	exit 1;
 }
 
-my $output;
+my $Output;
 
 MAIN: {
-	my $inputFile = $ARGV[0];
+	my $input_file = $ARGV[0];
 
 	if ( $#ARGV == 1 ) {
-		my $outputFile = $ARGV[1];
-		open(OUTFILE, ">$outputFile");
-		$output = *OUTFILE;
+		my $output_file = $ARGV[1];
+		open(OUTFILE, ">$output_file");
+		$Output = *OUTFILE;
 	}
 	else {
-		$output = *STDOUT;
+		$Output = *STDOUT;
 	}
 
-	&process_profile( $inputFile );
+	&process_profile( $input_file );
 
 	if ( $#ARGV == 1 ) {
 		close(OUTFILE);
@@ -37,24 +37,24 @@ sub usage {
 }
 
 sub process_profile {
-	my ( $inputFile ) = @_;
+	my ( $input_file ) = @_;
 
-	open( my $fileHandle, "<", $inputFile ) 
-		or die "Cannot find profile $inputFile\n";
+	open( my $file_handle, "<", $input_file ) 
+		or die "Cannot find profile $input_file\n";
 
-	while( <$fileHandle> )
+	while( <$file_handle> )
 	{
 		if ( /^\@include[ \t]+.+$/ ) { 
 			chomp;
 			my @include_line = split(/[ \t]+/);
-			my $include_file = dirname( $inputFile ) . '/' . $include_line[1];
+			my $include_file = dirname( $input_file ) . '/' . $include_line[1];
 			&process_profile( $include_file );
 		}
 		elsif ( $_ !~ /^#[ \t]*\$Id[:\$]/ ) { 
-			print $output "$_";
+			print $Output "$_";
 		}
 	}
-	close( $fileHandle );
+	close( $file_handle );
 }
 
 __END__
