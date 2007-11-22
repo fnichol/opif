@@ -1,0 +1,76 @@
+#!/usr/bin/perl -w
+use strict;
+use warnings;
+
+##
+# find-profile-frags - returns a list of profile source files for given profile
+#
+# Author: Fletcher Nichol
+# $Id$
+##
+
+use File::Basename;
+
+if ( $#ARGV > 0 ) {
+	&usage();
+	exit 1;
+}
+
+
+MAIN: {
+	my $input_file = $ARGV[0];
+
+	&process_profile( $input_file );
+
+	print "\n";
+}
+
+
+sub usage {
+	print "usage: " . basename( $0 ) . " <filename>\n";
+}
+
+
+sub process_profile {
+	my ( $input_file ) = @_;
+
+	print "$input_file ";
+
+	open( my $file_handle, "<", $input_file ) 
+		or die "Cannot find profile $input_file\n";
+
+	while( <$file_handle> )
+	{
+		if ( /^\@include[ \t]+.+$/ ) { 
+			chomp;
+			my @include_line = split(/[ \t]+/);
+			my $include_file = dirname( $input_file ) . '/' . $include_line[1];
+			&process_profile( $include_file );
+		}
+	}
+	close( $file_handle );
+}
+
+__END__
+
+
+=head1 NAME
+
+find-profile-frags - returns a list of profile source files for given profile
+
+=head1 SYNOPSIS
+
+B<find-profile-frags> I<filename>
+
+=head1 DESCRIPTION
+
+B<find-profile-frags> takes a profile template containing @include tokens and 
+outputs a list of files that are involved in creating the normalized profile.
+
+=head1 SEE ALSO
+
+perl(1)
+
+=head1 AUTHOR
+
+Fletcher Nichol
