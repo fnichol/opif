@@ -156,9 +156,16 @@ ${PLIST_NORM}: ${_WRKDIR_COOKIE} ${${PROFILE}_PLIST_SOURCES}
 	@${_CREATE_PLIST} > $@
 
 _internal-build:
+.if !defined(PROFILE) && !defined(_PROFILES_RECURS)
+.  for _profile in ${PROFILES}
+	@cd ${.CURDIR} && \
+		exec ${MAKE} build PROFILE=${_profile} _PROFILES_RECURS=true
+.  endfor
+.else
 	@cd ${.CURDIR} && exec ${MAKE} _check-profile PROFILE=${PROFILE}
 	@cd ${.CURDIR} && exec ${MAKE} ${PROFILE_NORM} PROFILE=${PROFILE}
 	@cd ${.CURDIR} && exec ${MAKE} ${PLIST_NORM} PROFILE=${PROFILE}
+.endif
 
 
 #####################################################
