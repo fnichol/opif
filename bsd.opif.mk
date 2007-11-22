@@ -56,3 +56,45 @@ UMOUNT = /sbin/umount
 UNAME = /usr/bin/uname
 XARGS = /usr/bin/xargs
 
+#
+# Global path locations
+#
+PROFDIR ?= ${.CURDIR}/profiles
+SCRIPTSDIR ?= ${.CURDIR}/scripts
+PROFFULLDIR := ${PROFDIR}
+WRKDIR ?= ${.CURDIR}/w-sets
+
+
+.if defined(P)
+PROFILE = ${P}
+.endif
+
+.if defined(PROFILE)
+.  if exists(${PROFDIR}/${PROFILE}.profile)
+PROFILE_FILE != ${FIND} ${PROFFULLDIR} -type f -name ${PROFILE}.profile
+
+${PROFILE}_SOURCES != ${SCRIPTSDIR}/find-profile-frags ${PROFILE_FILE}
+
+PROFILE_NORM = ${WRKDIR}/${PROFILE}.profile
+.  endif
+.endif
+
+FAKEDIR ?= ${WRKDIR}/fake-${PROFILE}
+
+
+CREATE_PROFILE = ${SCRIPTSDIR}/create-profile ${PROFILE_FILE}
+
+
+test:
+	@echo "PROFDIR is [${PROFDIR}]"
+	@echo "PROFFULLDIR is [${PROFFULLDIR}]"
+	@echo "WRKDIR is [${WRKDIR}]"
+	@echo "PROFILE is [${PROFILE}]"
+	@echo "PROFILE_FILE is [${PROFILE_FILE}]"
+	@echo "FAKEDIR is [${FAKEDIR}]"
+	@echo "${PROFILE}_source is [${${PROFILE}_SOURCES}]"
+
+${PROFILE_NORM}: ${${PROFILE}_SOURCES}
+	@echo "i need rebuilding: ${PROFILE_NORM}"
+	@mkdir -p ${WRKDIR}
+	${CREATE_PROFILE} > $@
