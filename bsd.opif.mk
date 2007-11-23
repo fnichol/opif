@@ -216,6 +216,15 @@ _check-plist-files:
 		fi; \
 	done
 
+_check-plist-patchfiles:
+	@for file in `${NAWK} 'BEGIN { FS = "[ \t]+" } \
+		{ if ( $$1 == "patch" )  printf "%s\n",$$2 }' $(PLIST_NORM)`; do \
+		if [ ! -f "${FILESDIR}/$$file" ]; then \
+			${ECHO_MSG} ">> Patchfile ${FILESDIR}/$$file in plist ${PLIST_NORM} does not exist."; \
+			exit 20; \
+		fi; \
+	done
+
 
 #####################################################
 # Cleaning up
