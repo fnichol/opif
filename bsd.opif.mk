@@ -45,6 +45,7 @@ MD5 = /bin/md5
 MKDIR = /bin/mkdir
 MOUNT_MFS = /sbin/mount_mfs
 MV = /bin/mv
+NAWK = /usr/bin/nawk
 PATCH_CMD = /usr/bin/patch
 RM = /bin/rm
 SED = /usr/bin/sed
@@ -63,6 +64,7 @@ ARCH ?= ${MACHINE}
 #
 PROFDIR ?= ${.CURDIR}/profiles
 SCRIPTSDIR ?= ${.CURDIR}/scripts
+FILESDIR ?= ${.CURDIR}/files
 PROFILE_MTREE ?= ${SCRIPTSDIR}/profile.mtree
 PROFFULLDIR := ${PROFDIR}
 WRKDIR ?= ${.CURDIR}/w-sets
@@ -204,6 +206,15 @@ _check-profile:
 		exit 1; \
 	fi
 .endif
+
+_check-plist-files:
+	@for file in `${NAWK} 'BEGIN { FS = "[ \t]+" } \
+		{ if ( $$1 == "file" )  printf "%s\n",$$2 }' $(PLIST_NORM)`; do \
+		if [ ! -f "${FILESDIR}/$$file" ]; then \
+			${ECHO_MSG} ">> File ${FILESDIR}/$$file in plist ${PLIST_NORM} does not exist."; \
+			exit 20; \
+		fi; \
+	done
 
 
 #####################################################
