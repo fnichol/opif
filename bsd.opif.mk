@@ -221,7 +221,16 @@ _check-plist-patchfiles:
 		{ if ( $$1 == "patch" )  printf "%s\n",$$2 }' $(PLIST_NORM)`; do \
 		if [ ! -f "${FILESDIR}/$$file" ]; then \
 			${ECHO_MSG} ">> Patchfile ${FILESDIR}/$$file in plist ${PLIST_NORM} does not exist."; \
-			exit 20; \
+			exit 21; \
+		fi; \
+	done
+
+_check-plist-file-dirs:
+	@for dir in `${NAWK} 'BEGIN { FS = "[ \t]+" } \
+		{ if ( $$1 == "file" )  printf "%s\n",$$3 }' $(PLIST_NORM)`; do \
+		if [ ! -d "${WRKINST}$$dir" ]; then \
+			${ECHO_MSG} ">> Directory $$dir needs to be defined in plist ${PLIST_NORM}."; \
+			exit 22; \
 		fi; \
 	done
 
