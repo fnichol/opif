@@ -94,6 +94,20 @@ PROFILES = ${PROFILE_FILES:C/\.profile$//}
 
 WRKINST = ${FAKEDIR}/${PROFILE}
 
+_PLIST_ALL_FILES != \
+	${NAWK} 'BEGIN { FS = "[ \t]+" } \
+		{ if ( $$1 == "file" )  printf "${FILESDIR}/%s\n",$$2 }' $(PLIST_NORM)
+
+_PLIST_ALL_PATCHES != \
+	${NAWK} 'BEGIN { FS = "[ \t]+" } \
+		{ if ( $$1 == "patch" )  printf "${FILESDIR}/%s\n",$$2 }' $(PLIST_NORM)
+
+_PLIST_INSTALLED_PAIRS != \
+	${NAWK} 'BEGIN { FS = "[ \t]+" } \
+		{ if ( $$1 == "file" ) { split($$1,path,"/"); printf "${FILESDIR}/%s|${WRKINST}%s/%s\n",$$2,$$3,path[1] } }' \
+		$(PLIST_NORM)
+
+
 _WRKDIR_COOKIE = ${WRKDIR}/.wrkdir_done
 _FAKE_MTREE_COOKIE = ${WRKDIR}/.${PROFILE}-fake_mtree_done
 
@@ -208,19 +222,17 @@ _check-profile:
 .endif
 
 _check-plist-files:
-	@for file in `${NAWK} 'BEGIN { FS = "[ \t]+" } \
-		{ if ( $$1 == "file" )  printf "%s\n",$$2 }' $(PLIST_NORM)`; do \
-		if [ ! -f "${FILESDIR}/$$file" ]; then \
-			${ECHO_MSG} ">> File ${FILESDIR}/$$file in plist ${PLIST_NORM} does not exist."; \
+	@for file in ${_PLIST_ALL_FILES}; do \
+		if [ ! -f "$$file" ]; then \
+			${ECHO_MSG} ">> File $$file in plist ${PLIST_NORM} does not exist."; \
 			exit 20; \
 		fi; \
 	done
 
 _check-plist-patchfiles:
-	@for file in `${NAWK} 'BEGIN { FS = "[ \t]+" } \
-		{ if ( $$1 == "patch" )  printf "%s\n",$$2 }' $(PLIST_NORM)`; do \
-		if [ ! -f "${FILESDIR}/$$file" ]; then \
-			${ECHO_MSG} ">> Patchfile ${FILESDIR}/$$file in plist ${PLIST_NORM} does not exist."; \
+	@for file in ${_PLIST_ALL_PATCHES}; do \
+		if [ ! -f "$$file" ]; then \
+			${ECHO_MSG} ">> Patchfile $$file in plist ${PLIST_NORM} does not exist."; \
 			exit 21; \
 		fi; \
 	done
@@ -268,3 +280,6 @@ _internal-list-profiles:
 
 list-profiles:
 	@cd ${.CURDIR} && exec ${MAKE} _internal-list-profiles
+
+test:
+	@echo "_PLIST_INSTALLED_PAIRS is ${_PLIST_INSTALLED_PAIRS}"
