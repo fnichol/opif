@@ -255,9 +255,16 @@ _install-dirs-and-files:
 .endfor
 
 _internal-fake:
+.if !defined(PROFILE) && !defined(_PROFILES_RECURS)
+.  for _profile in ${PROFILES}
+	@cd ${.CURDIR} && \
+		exec ${MAKE} fake PROFILE=${_profile} _PROFILES_RECURS=true
+.  endfor
+.else
 	@cd ${.CURDIR} && exec ${MAKE} build PROFILE=${PROFILE}
 	@cd ${.CURDIR} && exec ${MAKE} ${_FAKE_MTREE_COOKIE} PROFILE=${PROFILE}
 	@cd ${.CURDIR} && exec ${MAKE} _install-dirs-and-files PROFILE=${PROFILE}
+.endif
 
 
 #####################################################
