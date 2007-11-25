@@ -117,6 +117,11 @@ _PLIST_INSTALLED_PATCHES_AR != \
 		{ if ( $$1 == "patch" ) { filename = $$2; sub(/.*\//, "", filename); \
 		printf "${FILESDIR}/%s|${WRKINSTPATCHES}/%s\n", \
 		$$2, filename } }' $(PLIST_NORM)
+
+_PLIST_INSTALLED_DIRS_AR != \
+	${NAWK} 'BEGIN { FS = "[ \t]+" } \
+		{ if ( $$1 == "dir" ) { printf "${WRKINST}%s@%s:%s:%s\n", \
+		$$2, $$3, $$4, $$5 } }' $(PLIST_NORM)
 .  endif
 .endif
 
@@ -167,7 +172,7 @@ ERRORS += "Fatal: unknown clean command: ${_w}"
 .endfor
 
 # Top-level targets redirect to the real _internal-target
-.for _t in build clean
+.for _t in build fake clean
 ${_t}: _internal-${_t}
 .endfor
 
@@ -203,7 +208,7 @@ _internal-build:
 
 
 #####################################################
-# 
+# Creating a fake install directory tree with files
 #####################################################
 ${_FAKE_MTREE_COOKIE}:
 	@cd ${.CURDIR} && exec ${MAKE} _check-profile PROFILE=${PROFILE}
@@ -214,6 +219,7 @@ ${_FAKE_MTREE_COOKIE}:
 
 .for _file in ${_PLIST_INSTALLED_FILES_AR}
 ${_file:C/^.*\|//:C/@.*$//}: ${_file:C/\|.*$//}
+	@echo ">> Installing ${_file:C/^.*\|//:C/@.*$//}"
 	@perms=`echo "${_file:C/^.*@//}" | awk -F':' '{ print $$1 }'`; \
 	user=`echo "${_file:C/^.*@//}" | awk -F':' '{ print $$2 }'`; \
 	group=`echo "${_file:C/^.*@//}" | awk -F':' '{ print $$3 }'`; \
@@ -223,17 +229,35 @@ ${_file:C/^.*\|//:C/@.*$//}: ${_file:C/\|.*$//}
 
 .for _file in ${_PLIST_INSTALLED_PATCHES_AR}
 ${_file:C/^.*\|//}: ${_file:C/\|.*$//}
+	@echo ">> Installing ${_file:C/^.*\|//}"
 	@${INSTALL} -m 0644 -o 0 -g 0 ${_file:C/\|.*$//} `dirname ${_file:C/^.*\|//}`
 .endfor
 
+.for _file in ${_PLIST_INSTALLED_DIRS_AR}
+${_file:C/@.*$//}:
+	@echo ">> Making directory ${_file:C/@.*$//}"
+	@perms=`echo "${_file:C/^.*@//}" | awk -F':' '{ print $$1 }'`; \
+	user=`echo "${_file:C/^.*@//}" | awk -F':' '{ print $$2 }'`; \
+	group=`echo "${_file:C/^.*@//}" | awk -F':' '{ print $$3 }'`; \
+	${INSTALL} -d -m $$perms -o $$user -g $$group ${_file:C/@.*$//}
+.endfor
 
-testy:
+_install-dirs-and-files:
+.for _f in ${_PLIST_INSTALLED_DIRS_AR}
+	@cd ${.CURDIR} && exec ${MAKE} ${_f:C/@.*$//} PROFILE=${PROFILE}
+.endfor
+	@cd ${.CURDIR} && exec ${MAKE} _check-plist-file-dirs PROFILE=${PROFILE}
 .for _f in ${_PLIST_INSTALLED_FILES_AR}
 	@cd ${.CURDIR} && exec ${MAKE} ${_f:C/^.*\|//:C/@.*$//} PROFILE=${PROFILE}
 .endfor
 .for _f in ${_PLIST_INSTALLED_PATCHES_AR}
 	@cd ${.CURDIR} && exec ${MAKE} ${_f:C/^.*\|//} PROFILE=${PROFILE}
 .endfor
+
+_internal-fake:
+	@cd ${.CURDIR} && exec ${MAKE} build PROFILE=${PROFILE}
+	@cd ${.CURDIR} && exec ${MAKE} ${_FAKE_MTREE_COOKIE} PROFILE=${PROFILE}
+	@cd ${.CURDIR} && exec ${MAKE} _install-dirs-and-files PROFILE=${PROFILE}
 
 
 #####################################################
