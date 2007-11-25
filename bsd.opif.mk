@@ -214,9 +214,9 @@ _internal-build:
 ${_FAKE_MTREE_COOKIE}:
 	@cd ${.CURDIR} && exec ${MAKE} _check-profile PROFILE=${PROFILE}
 	@${SUDO} ${INSTALL} -d -m 755 -o root -g wheel ${WRKINST}
-	${CAT} ${PROFILE_MTREE} | \
+	@${CAT} ${PROFILE_MTREE} | \
 		${SUDO} /usr/sbin/mtree -U -e -d -n -p ${WRKINST} >/dev/null
-	@${_MAKE_COOKIE} $@
+#	@${_MAKE_COOKIE} $@
 
 .for _file in ${_PLIST_INSTALLED_FILES_AR}
 ${_file:C/^.*\|//:C/@.*$//}: ${_file:C/\|.*$//}
