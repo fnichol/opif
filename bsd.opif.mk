@@ -71,6 +71,9 @@ PROFFULLDIR := ${PROFDIR}
 WRKDIR ?= ${.CURDIR}/w-sets
 FAKEDIR ?= ${WRKDIR}/fake-${ARCH}
 
+KEY_HOSTNAME = hostname
+KEY_OSREV = osrev
+
 
 .if defined(P)
 PROFILE = ${P}
@@ -127,7 +130,6 @@ _PLIST_INSTALLED_DIRS_AR != \
 
 
 _WRKDIR_COOKIE = ${WRKDIR}/.wrkdir_done
-#_FAKE_MTREE_COOKIE = ${WRKDIR}/.${PROFILE}-fake_mtree_done
 _FAKE_MTREE_COOKIE = ${WRKINST}
 
 
@@ -175,7 +177,7 @@ ERRORS += "Fatal: unknown clean command: ${_w}"
 .endfor
 
 # Top-level targets redirect to the real _internal-target
-.for _t in build fake clean
+.for _t in build fake package clean
 ${_t}: _internal-${_t}
 .endfor
 
@@ -207,6 +209,7 @@ _internal-build:
 	@cd ${.CURDIR} && exec ${MAKE} _check-profile PROFILE=${PROFILE}
 	@cd ${.CURDIR} && exec ${MAKE} ${PROFILE_NORM} PROFILE=${PROFILE}
 	@cd ${.CURDIR} && exec ${MAKE} ${PLIST_NORM} PROFILE=${PROFILE}
+	@cd ${.CURDIR} && exec ${MAKE} _check-profile-syntax PROFILE=${PROFILE}
 .endif
 
 
@@ -218,7 +221,6 @@ ${_FAKE_MTREE_COOKIE}:
 	@${SUDO} ${INSTALL} -d -m 755 -o root -g wheel ${WRKINST}
 	@${CAT} ${PROFILE_MTREE} | \
 		${SUDO} /usr/sbin/mtree -U -e -d -n -p ${WRKINST} >/dev/null
-#	@${_MAKE_COOKIE} $@
 
 .for _file in ${_PLIST_INSTALLED_FILES_AR}
 ${_file:C/^.*\|//:C/@.*$//}: ${_file:C/\|.*$//}
@@ -247,7 +249,7 @@ ${_file:C/@.*$//}:
 
 ${WRKINST}/${PROFILE}.profile: ${PROFILE_NORM}
 	@echo ">> Installing ${WRKINST}/${PROFILE}.profile"
-	@${INSTALL} -m 0444 -o 0 -g 0 ${PROFILE_NORM} ${WRKINST}/${PROFILE}.profile
+	@${INSTALL} -m 0444 -o 0 -g 0 ${PROFILE_NORM} ${WRKINST}/site.profile
 	
 _install-dirs-and-files:
 .for _f in ${_PLIST_INSTALLED_DIRS_AR}
@@ -277,6 +279,21 @@ _internal-fake:
 
 
 #####################################################
+# 
+#####################################################
+_internal-package:
+.if !defined(PROFILE) && !defined(_PROFILES_RECURS)
+.  for _profile in ${PROFILES}
+	@cd ${.CURDIR} && \
+		exec ${MAKE} package PROFILE=${_profile} _PROFILES_RECURS=true
+.  endfor
+.else
+	@cd ${.CURDIR} && exec ${MAKE} fake PROFILE=${PROFILE}
+.endif
+
+
+
+#####################################################
 # Checking for profile files existance
 #####################################################
 _check-profile:
@@ -295,6 +312,16 @@ _check-profile:
 		exit 1; \
 	fi
 .endif
+
+_check-profile-syntax:
+	@if ! grep '^${KEY_OSREV}[[:space:]]\{1,\}' ${PROFILE_NORM} > /dev/null; then \
+		${ECHO_MSG} ">> Keyword "${KEY_OSREV}" must be defined in profile ${PROFILE}."; \
+		exit 1; \
+	fi
+	@if ! grep '^${KEY_HOSTNAME}[[:space:]]\{1,\}' ${PROFILE_NORM} > /dev/null; then \
+		${ECHO_MSG} ">> Keyword "${KEY_HOSTNAME}" must be defined in profile ${PROFILE}."; \
+		exit 1; \
+	fi
 
 _check-plist-files:
 	@for file in ${_PLIST_ALL_FILES}; do \
