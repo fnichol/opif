@@ -95,6 +95,7 @@ PROFILE_NORM = ${WRKDIR}/${PROFILE}.profile
 PLIST_NORM = ${WRKDIR}/${PROFILE}.plist
 
 WRKINST = ${FAKEDIR}/${PROFILE}
+WRKINSTPATCHES = ${WRKINST}/tmp/patchfiles
 
 .  if exists(${PLIST_NORM})
 _PLIST_ALL_FILES != \
@@ -110,6 +111,12 @@ _PLIST_INSTALLED_FILES_AR != \
 		{ if ( $$1 == "file" ) { filename = $$2; sub(/.*\//, "", filename); \
 		printf "${FILESDIR}/%s|${WRKINST}%s/%s@%s:%s:%s\n", \
 		$$2, $$3, filename, $$4, $$5, $$6 } }' $(PLIST_NORM)
+
+_PLIST_INSTALLED_PATCHES_AR != \
+	${NAWK} 'BEGIN { FS = "[ \t]+" } \
+		{ if ( $$1 == "patch" ) { filename = $$2; sub(/.*\//, "", filename); \
+		printf "${FILESDIR}/%s|${WRKINSTPATCHES}/%s\n", \
+		$$2, filename } }' $(PLIST_NORM)
 .  endif
 .endif
 
@@ -207,15 +214,25 @@ ${_FAKE_MTREE_COOKIE}:
 
 .for _file in ${_PLIST_INSTALLED_FILES_AR}
 ${_file:C/^.*\|//:C/@.*$//}: ${_file:C/\|.*$//}
-	@perms=`echo ${_file:C/^.*@//} | awk -F':' '{ print $$1 }'`; \
-	user=`echo ${_file:C/^.*@//} | awk -F':' '{ print $$2 }'`; \
-	group=`echo ${_file:C/^.*@//} | awk -F':' '{ print $$3 }'`; \
-	echo "install -m $$perms -o $$user -g $$group ${_file:C/\|.*$//} `dirname ${_file:C/^.*\|//:C/@.*$//}`"
+	@perms=`echo "${_file:C/^.*@//}" | awk -F':' '{ print $$1 }'`; \
+	user=`echo "${_file:C/^.*@//}" | awk -F':' '{ print $$2 }'`; \
+	group=`echo "${_file:C/^.*@//}" | awk -F':' '{ print $$3 }'`; \
+	${INSTALL} -m $$perms -o $$user -g $$group ${_file:C/\|.*$//} \
+	`dirname ${_file:C/^.*\|//:C/@.*$//}`
 .endfor
+
+.for _file in ${_PLIST_INSTALLED_PATCHES_AR}
+${_file:C/^.*\|//}: ${_file:C/\|.*$//}
+	@${INSTALL} -m 0644 -o 0 -g 0 ${_file:C/\|.*$//} `dirname ${_file:C/^.*\|//}`
+.endfor
+
 
 testy:
 .for _f in ${_PLIST_INSTALLED_FILES_AR}
 	@cd ${.CURDIR} && exec ${MAKE} ${_f:C/^.*\|//:C/@.*$//} PROFILE=${PROFILE}
+.endfor
+.for _f in ${_PLIST_INSTALLED_PATCHES_AR}
+	@cd ${.CURDIR} && exec ${MAKE} ${_f:C/^.*\|//} PROFILE=${PROFILE}
 .endfor
 
 
