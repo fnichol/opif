@@ -76,6 +76,14 @@ FAKEDIR ?= ${WRKDIR}/fake-${ARCH}
 PROFILE = ${P}
 .endif
 
+
+_PROFILE_FILES != \
+	${FIND} ${PROFFULLDIR} -type f -name '*.profile' -print | \
+	${AWK} -F'/' '{ print $$NF }' | ${SORT}
+PROFILE_FILES = ${_PROFILE_FILES:T}
+PROFILES = ${PROFILE_FILES:C/\.profile$//}
+
+
 .if defined(PROFILE) && exists(${PROFDIR}/${PROFILE}.profile)
 PROFILE_FILE != ${FIND} ${PROFFULLDIR} -type f -name ${PROFILE}.profile
 PLIST_FILE != ${FIND} ${PROFFULLDIR} -type f -name ${PROFILE}.plist
@@ -86,14 +94,9 @@ ${PROFILE}_PLIST_SOURCES != ${SCRIPTSDIR}/find-profile-frags ${PLIST_FILE}
 PROFILE_NORM = ${WRKDIR}/${PROFILE}.profile
 PLIST_NORM = ${WRKDIR}/${PROFILE}.plist
 
-_PROFILE_FILES != \
-	${FIND} ${PROFFULLDIR} -type f -name '*.profile' -print | \
-	${AWK} -F'/' '{ print $$NF }' | ${SORT}
-PROFILE_FILES = ${_PROFILE_FILES:T}
-PROFILES = ${PROFILE_FILES:C/\.profile$//}
-
 WRKINST = ${FAKEDIR}/${PROFILE}
 
+.  if exists(${PLIST_NORM})
 _PLIST_ALL_FILES != \
 	${NAWK} 'BEGIN { FS = "[ \t]+" } \
 		{ if ( $$1 == "file" )  printf "${FILESDIR}/%s\n",$$2 }' $(PLIST_NORM)
@@ -107,6 +110,7 @@ _PLIST_INSTALLED_FILES_AR != \
 		{ if ( $$1 == "file" ) { filename = $$2; sub(/.*\//, "", filename); \
 		printf "${FILESDIR}/%s|${WRKINST}%s/%s@%s:%s:%s\n", \
 		$$2, $$3, filename, $$4, $$5, $$6 } }' $(PLIST_NORM)
+.  endif
 .endif
 
 
