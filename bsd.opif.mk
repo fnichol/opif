@@ -66,6 +66,7 @@ ARCH ?= ${MACHINE}
 PROFDIR ?= ${.CURDIR}/profiles
 SCRIPTSDIR ?= ${.CURDIR}/scripts
 FILESDIR ?= ${.CURDIR}/files
+PACKAGE_REPOSITORY = ${.CURDIR}/packages
 PROFILE_MTREE ?= ${SCRIPTSDIR}/profile.mtree
 PROFFULLDIR := ${PROFDIR}
 WRKDIR ?= ${.CURDIR}/w-sets
