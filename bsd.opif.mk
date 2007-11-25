@@ -39,6 +39,7 @@ FIND = /usr/bin/find
 FTP = /usr/bin/ftp
 GREP = /usr/bin/grep
 HEAD = /usr/bin/head
+INSTALL = /usr/bin/install
 KSH = /bin/ksh
 LS = /bin/ls
 MD5 = /bin/md5
@@ -81,7 +82,6 @@ PLIST_FILE != ${FIND} ${PROFFULLDIR} -type f -name ${PROFILE}.plist
 
 ${PROFILE}_SOURCES != ${SCRIPTSDIR}/find-profile-frags ${PROFILE_FILE}
 ${PROFILE}_PLIST_SOURCES != ${SCRIPTSDIR}/find-profile-frags ${PLIST_FILE}
-.endif
 
 PROFILE_NORM = ${WRKDIR}/${PROFILE}.profile
 PLIST_NORM = ${WRKDIR}/${PROFILE}.plist
@@ -102,10 +102,12 @@ _PLIST_ALL_PATCHES != \
 	${NAWK} 'BEGIN { FS = "[ \t]+" } \
 		{ if ( $$1 == "patch" )  printf "${FILESDIR}/%s\n",$$2 }' $(PLIST_NORM)
 
-_PLIST_INSTALLED_PAIRS != \
+_PLIST_INSTALLED_FILES_AR != \
 	${NAWK} 'BEGIN { FS = "[ \t]+" } \
-		{ if ( $$1 == "file" ) { split($$1,path,"/"); printf "${FILESDIR}/%s|${WRKINST}%s/%s\n",$$2,$$3,path[1] } }' \
-		$(PLIST_NORM)
+		{ if ( $$1 == "file" ) { filename = $$2; sub(/.*\//, "", filename); \
+		printf "${FILESDIR}/%s|${WRKINST}%s/%s@%s:%s:%s\n", \
+		$$2, $$3, filename, $$4, $$5, $$6 } }' $(PLIST_NORM)
+.endif
 
 
 _WRKDIR_COOKIE = ${WRKDIR}/.wrkdir_done
@@ -194,11 +196,23 @@ _internal-build:
 #####################################################
 ${_FAKE_MTREE_COOKIE}:
 	@cd ${.CURDIR} && exec ${MAKE} _check-profile PROFILE=${PROFILE}
-	@${SUDO} install -d -m 755 -o root -g wheel ${WRKINST}
+	@${SUDO} ${INSTALL} -d -m 755 -o root -g wheel ${WRKINST}
 	${CAT} ${PROFILE_MTREE} | \
 		${SUDO} /usr/sbin/mtree -U -e -d -n -p ${WRKINST} >/dev/null
 	@${_MAKE_COOKIE} $@
 
+.for _file in ${_PLIST_INSTALLED_FILES_AR}
+${_file:C/^.*\|//:C/@.*$//}: ${_file:C/\|.*$//}
+	@perms=`echo ${_file:C/^.*@//} | awk -F':' '{ print $$1 }'`; \
+	user=`echo ${_file:C/^.*@//} | awk -F':' '{ print $$2 }'`; \
+	group=`echo ${_file:C/^.*@//} | awk -F':' '{ print $$3 }'`; \
+	echo "install -m $$perms -o $$user -g $$group ${_file:C/\|.*$//} `dirname ${_file:C/^.*\|//:C/@.*$//}`"
+.endfor
+
+testy:
+.for _f in ${_PLIST_INSTALLED_FILES_AR}
+	@cd ${.CURDIR} && exec ${MAKE} ${_f:C/^.*\|//:C/@.*$//} PROFILE=${PROFILE}
+.endfor
 
 
 #####################################################
@@ -281,5 +295,3 @@ _internal-list-profiles:
 list-profiles:
 	@cd ${.CURDIR} && exec ${MAKE} _internal-list-profiles
 
-test:
-	@echo "_PLIST_INSTALLED_PAIRS is ${_PLIST_INSTALLED_PAIRS}"
