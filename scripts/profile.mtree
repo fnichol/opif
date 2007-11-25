@@ -2,6 +2,10 @@
 .
     etc
     ..
+    tmp
+        patchfiles
+        ..
+    ..
     var
         db
         ..
