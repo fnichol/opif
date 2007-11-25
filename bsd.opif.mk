@@ -127,7 +127,8 @@ _PLIST_INSTALLED_DIRS_AR != \
 
 
 _WRKDIR_COOKIE = ${WRKDIR}/.wrkdir_done
-_FAKE_MTREE_COOKIE = ${WRKDIR}/.${PROFILE}-fake_mtree_done
+#_FAKE_MTREE_COOKIE = ${WRKDIR}/.${PROFILE}-fake_mtree_done
+_FAKE_MTREE_COOKIE = ${WRKINST}
 
 
 #
