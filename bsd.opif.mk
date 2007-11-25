@@ -139,6 +139,8 @@ _MAKE_COOKIE = ${TOUCH}
 _CREATE_PROFILE = ${SCRIPTSDIR}/create-profile ${PROFILE_FILE}
 _CREATE_PLIST = ${SCRIPTSDIR}/create-profile ${PLIST_FILE}
 
+_PROFILE_REPLACE_TOKENS = ${SED} 's?$${OSREV}?${OSREV}?g'
+
 # Used to print all the '===>' style prompts -- override this to turn them off
 ECHO_MSG ?= ${ECHO}
 
@@ -189,11 +191,11 @@ ${_WRKDIR_COOKIE}:
 #####################################################
 ${PROFILE_NORM}: ${_WRKDIR_COOKIE} ${${PROFILE}_SOURCES}
 	@${ECHO_MSG} "===> Creating normalized profile for ${PROFILE}"
-	@${_CREATE_PROFILE} > $@
+	@${_CREATE_PROFILE} | ${_PROFILE_REPLACE_TOKENS} > $@
 
 ${PLIST_NORM}: ${_WRKDIR_COOKIE} ${${PROFILE}_PLIST_SOURCES}
 	@${ECHO_MSG} "===> Creating normalized plist for ${PROFILE}"
-	@${_CREATE_PLIST} > $@
+	@${_CREATE_PLIST} | ${_PROFILE_REPLACE_TOKENS} > $@
 
 _internal-build:
 .if !defined(PROFILE) && !defined(_PROFILES_RECURS)
