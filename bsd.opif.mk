@@ -245,6 +245,10 @@ ${_file:C/@.*$//}:
 	${INSTALL} -d -m $$perms -o $$user -g $$group ${_file:C/@.*$//}
 .endfor
 
+${WRKINST}/${PROFILE}.profile: ${PROFILE_NORM}
+	@echo ">> Installing ${WRKINST}/${PROFILE}.profile"
+	@${INSTALL} -m 0444 -o 0 -g 0 ${PROFILE_NORM} ${WRKINST}/${PROFILE}.profile
+	
 _install-dirs-and-files:
 .for _f in ${_PLIST_INSTALLED_DIRS_AR}
 	@cd ${.CURDIR} && exec ${MAKE} ${_f:C/@.*$//} PROFILE=${PROFILE}
@@ -256,6 +260,8 @@ _install-dirs-and-files:
 .for _f in ${_PLIST_INSTALLED_PATCHES_AR}
 	@cd ${.CURDIR} && exec ${MAKE} ${_f:C/^.*\|//} PROFILE=${PROFILE}
 .endfor
+	@cd ${.CURDIR} && exec ${MAKE} ${WRKINST}/${PROFILE}.profile \
+		PROFILE=${PROFILE}
 
 _internal-fake:
 .if !defined(PROFILE) && !defined(_PROFILES_RECURS)
