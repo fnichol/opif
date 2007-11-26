@@ -24,3 +24,10 @@ fi
 if [ -z "$PROFILE" ]; then
 	PROFILE=${MNTROOT}/site.profile
 fi
+
+export MNTROOT HOSTNAME SI_CONFIG_DIR PROFILE
+
+# import subroutines
+. ${MNTROOT}/install.site.sub
+
+exit 0
