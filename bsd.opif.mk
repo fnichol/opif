@@ -141,7 +141,8 @@ _PLIST_INSTALLED_DIRS_AR != \
 _WRKDIR_COOKIE = ${WRKDIR}/.wrkdir_done
 _FAKE_MTREE_COOKIE = ${WRKINST}
 
-_EXTRA_INSTALLED_FILES = ${WRKINST}/site.profile
+_PACKAGE_SCRIPTS = ${SCRIPTSDIR}/install.site ${SCRIPTSDIR}/install.site.sub
+_EXTRA_INSTALLED_FILES = ${WRKINST}/site.profile ${_PACKAGE_SCRIPTS}
 
 #
 # Common commands and operations
@@ -264,6 +265,12 @@ ${_file:C/@.*$//}:
 ${WRKINST}/site.profile: ${PROFILE_NORM}
 	@echo ">> Installing ${WRKINST}/site.profile"
 	@${INSTALL} -m 0444 -o 0 -g 0 ${PROFILE_NORM} $@
+
+.for _f in ${_PACKAGE_SCRIPTS}
+${WRKINST}/${_f:T}: ${_f}
+	@echo ">> Installing ${WRKINST}/${_f:T}"
+	@${INSTALL} -m 0555 -o 0 -g 0 ${_f} $@
+.endfor
 	
 _install-dirs-and-files:
 .for _f in ${_PLIST_INSTALLED_DIRS_AR}
@@ -275,6 +282,9 @@ _install-dirs-and-files:
 .endfor
 .for _f in ${_PLIST_INSTALLED_PATCHES_AR}
 	@cd ${.CURDIR} && exec ${MAKE} ${_f:C/^.*\|//} PROFILE=${PROFILE}
+.endfor
+.for _f in ${_PACKAGE_SCRIPTS}
+	@cd ${.CURDIR} && exec ${MAKE} ${WRKINST}/${_f:T} PROFILE=${PROFILE}
 .endfor
 	@cd ${.CURDIR} && exec ${MAKE} ${WRKINST}/site.profile PROFILE=${PROFILE}
 
