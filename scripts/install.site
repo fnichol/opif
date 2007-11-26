@@ -1,0 +1,26 @@
+#!/bin/sh
+
+##
+# install.site - user-created set install script
+#
+# Author: Fletcher Nichol
+# $Id$
+##
+
+# used if filesystem root is mounted in a place other than /
+if [ -z "$MNTROOT" ]; then
+	MNTROOT=
+fi
+
+# hostname of the installed system
+HOSTNAME="`/usr/bin/nawk -F'.' '{print $1}' ${MNTROOT}/etc/myname`"
+
+# extra system configuration/script files directory
+if [ -z "$SI_CONFIG_DIR" ]; then
+	SI_CONFIG_DIR=/tmp/install_config
+fi
+
+# site configuration profile
+if [ -z "$PROFILE" ]; then
+	PROFILE=${MNTROOT}/site.profile
+fi

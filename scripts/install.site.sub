@@ -1,0 +1,9 @@
+#!/bin/sh
+
+##
+# install.site.sub - user-created set install script functions
+#
+# Author: Fletcher Nichol
+# $Id$
+##
+
