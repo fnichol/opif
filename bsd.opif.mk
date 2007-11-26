@@ -74,6 +74,7 @@ FAKEDIR ?= ${WRKDIR}/fake-${ARCH}
 
 KEY_HOSTNAME = hostname
 KEY_OSREV = osrev
+KEY_ARCH = arch
 
 
 .if defined(P)
@@ -152,7 +153,18 @@ _MAKE_COOKIE = ${TOUCH}
 _CREATE_PROFILE = ${SCRIPTSDIR}/create-profile ${PROFILE_FILE}
 _CREATE_PLIST = ${SCRIPTSDIR}/create-profile ${PLIST_FILE}
 
-_PROFILE_REPLACE_TOKENS = ${SED} 's?$${OSREV}?${OSREV}?g'
+_GET_TOKENS = \
+	_osrev="`${GREP} -E '^${KEY_OSREV}[[:space:]]+' ${PROFILE_FILE} | \
+		${SED} 's/^${KEY_OSREV}[[:space:]]\{1,\}\([0-9]\.[0-9]\)$$/\1/'`"; \
+	_osrev_short="`${ECHO} $$_osrev | ${SED} 's/\.//g'`"; \
+	_arch="`${GREP} -E '^${KEY_ARCH}[[:space:]]+' ${PROFILE_FILE} | \
+		${SED} 's/^${KEY_ARCH}[[:space:]]\{1,\}\(.*\)$$/\1/'`"; \
+	_hostname="`${GREP} -E '^${KEY_HOSTNAME}[[:space:]]+' ${PROFILE_FILE} | \
+		${SED} 's/^${KEY_HOSTNAME}[[:space:]]\{1,\}\(.*\)$$/\1/'`";
+
+
+#_PROFILE_REPLACE_TOKENS = ${SED} "s?\\$${OSREV}?${OSREV}?g"
+_PROFILE_REPLACE_TOKENS = cat -
 
 # Used to print all the '===>' style prompts -- override this to turn them off
 ECHO_MSG ?= ${ECHO}
@@ -355,6 +367,10 @@ _check-profile-syntax:
 		${ECHO_MSG} ">> Keyword "${KEY_OSREV}" must be defined in profile ${PROFILE}."; \
 		exit 1; \
 	fi
+	@if ! grep '^${KEY_ARCH}[[:space:]]\{1,\}' ${PROFILE_NORM} > /dev/null; then \
+		${ECHO_MSG} ">> Keyword "${KEY_ARCH}" must be defined in profile ${PROFILE}."; \
+		exit 1; \
+	fi
 	@if ! grep '^${KEY_HOSTNAME}[[:space:]]\{1,\}' ${PROFILE_NORM} > /dev/null; then \
 		${ECHO_MSG} ">> Keyword "${KEY_HOSTNAME}" must be defined in profile ${PROFILE}."; \
 		exit 1; \
@@ -425,3 +441,11 @@ _internal-list-profiles:
 
 list-profiles:
 	@cd ${.CURDIR} && exec ${MAKE} _internal-list-profiles
+
+test:
+	@${_GET_TOKENS} \
+		echo "_osrev is $$_osrev"; \
+		echo "_osrev_short is $$_osrev_short"; \
+		echo "_arch is $$_arch"; \
+		echo "_hostname is $$_hostname"
+
