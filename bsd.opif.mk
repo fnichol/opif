@@ -141,6 +141,7 @@ _PLIST_INSTALLED_DIRS_AR != \
 _WRKDIR_COOKIE = ${WRKDIR}/.wrkdir_done
 _FAKE_MTREE_COOKIE = ${WRKINST}
 
+_EXTRA_INSTALLED_FILES = ${WRKINST}/site.profile
 
 #
 # Common commands and operations
@@ -260,9 +261,9 @@ ${_file:C/@.*$//}:
 	${INSTALL} -d -m $$perms -o $$user -g $$group ${_file:C/@.*$//}
 .endfor
 
-${WRKINST}/${PROFILE}.profile: ${PROFILE_NORM}
+${WRKINST}/site.profile: ${PROFILE_NORM}
 	@echo ">> Installing ${WRKINST}/site.profile"
-	@${INSTALL} -m 0444 -o 0 -g 0 ${PROFILE_NORM} ${WRKINST}/site.profile
+	@${INSTALL} -m 0444 -o 0 -g 0 ${PROFILE_NORM} $@
 	
 _install-dirs-and-files:
 .for _f in ${_PLIST_INSTALLED_DIRS_AR}
@@ -275,8 +276,7 @@ _install-dirs-and-files:
 .for _f in ${_PLIST_INSTALLED_PATCHES_AR}
 	@cd ${.CURDIR} && exec ${MAKE} ${_f:C/^.*\|//} PROFILE=${PROFILE}
 .endfor
-	@cd ${.CURDIR} && exec ${MAKE} ${WRKINST}/${PROFILE}.profile \
-		PROFILE=${PROFILE}
+	@cd ${.CURDIR} && exec ${MAKE} ${WRKINST}/site.profile PROFILE=${PROFILE}
 
 _internal-fake:
 .if !defined(PROFILE) && !defined(_PROFILES_RECURS)
@@ -299,7 +299,7 @@ ${PACKAGE_REPOSITORY}:
 	@${RM} -rf ${PACKAGE_REPOSITORY}
 	@${MKDIR} -p ${PACKAGE_REPOSITORY}
 
-${_PACKAGE}:
+${_PACKAGE}: ${_PLIST_INSTALLED_FILES_AR:C/^.*\|//:C/@.*$//} ${_PLIST_INSTALLED_PATCHES_AR:C/^.*\|//} ${_EXTRA_INSTALLED_FILES}
 	@${ECHO_MSG} ">> Creating site install set ${_PACKAGE}"
 	@cd ${WRKINST} && ${TAR} cpfz ${_PACKAGE} .
 
