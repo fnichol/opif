@@ -101,6 +101,14 @@ PLIST_NORM = ${WRKDIR}/${PROFILE}.plist
 WRKINST = ${FAKEDIR}/${PROFILE}
 WRKINSTPATCHES = ${WRKINST}/tmp/patchfiles
 
+.if exists(${PROFILE_NORM})
+_PACKAGE != ${ECHO} ${PACKAGE_REPOSITORY}/site`${GREP} -E '^osrev[[:space:]]+' \
+	${PROFILE_NORM} | ${SED} \
+	's/^osrev[[:space:]]\{1,\}\([0-9]\)\.\([0-9]\)$$/\1\2/'`-`${GREP} -E \
+	'^hostname[[:space:]]+' ${PROFILE_NORM} | \
+	${SED} 's/^hostname[[:space:]]\{1,\}\([[:alnum:]]\{1,\}\)$$/\1/'`.tgz
+.endif
+
 .  if exists(${PLIST_NORM})
 _PLIST_ALL_FILES != \
 	${NAWK} 'BEGIN { FS = "[ \t]+" } \
@@ -169,8 +177,11 @@ _clean += work
 .if ${_clean:L:Mwork}
 _clean += fake
 .endif
+.if ${_clean:L:Mall}
+_clean += work fake packages
+.endif
 # check that clean is clean
-_okay_words = work fake dist packages
+_okay_words = work fake packages all
 .for _w in ${_clean:L}
 .  if !${_okay_words:M${_w}}
 ERRORS += "Fatal: unknown clean command: ${_w}"
@@ -249,7 +260,7 @@ ${_file:C/@.*$//}:
 .endfor
 
 ${WRKINST}/${PROFILE}.profile: ${PROFILE_NORM}
-	@echo ">> Installing ${WRKINST}/${PROFILE}.profile"
+	@echo ">> Installing ${WRKINST}/site.profile"
 	@${INSTALL} -m 0444 -o 0 -g 0 ${PROFILE_NORM} ${WRKINST}/site.profile
 	
 _install-dirs-and-files:
@@ -282,6 +293,14 @@ _internal-fake:
 #####################################################
 # 
 #####################################################
+${PACKAGE_REPOSITORY}:
+	@${RM} -rf ${PACKAGE_REPOSITORY}
+	@${MKDIR} -p ${PACKAGE_REPOSITORY}
+
+${_PACKAGE}:
+	@${ECHO_MSG} "===> Creating site install set ${_PACKAGE}"
+	@cd ${WRKINST} && ${TAR} cpfz ${_PACKAGE} .
+
 _internal-package:
 .if !defined(PROFILE) && !defined(_PROFILES_RECURS)
 .  for _profile in ${PROFILES}
@@ -290,6 +309,8 @@ _internal-package:
 .  endfor
 .else
 	@cd ${.CURDIR} && exec ${MAKE} fake PROFILE=${PROFILE}
+	@cd ${.CURDIR} && exec ${MAKE} ${PACKAGE_REPOSITORY} PROFILE=${PROFILE}
+	@cd ${.CURDIR} && exec ${MAKE} ${_PACKAGE} PROFILE=${PROFILE}
 .endif
 
 
@@ -360,6 +381,7 @@ _internal-clean:
 	@${RM} -rf ${WRKDIR}
 .endif
 .if ${_clean:L:Mfake}
+	@${ECHO_MSG} "===>  Fake cleaning"
 .  if defined(PROFILE)
 	@cd ${.CURDIR} && exec ${MAKE} _check-profile PROFILE=${PROFILE}
 	@${RM} -rf ${FAKEDIR}/${PROFILE}
@@ -369,7 +391,12 @@ _internal-clean:
 .endif
 .if ${_clean:L:Mpackages}
 	@${ECHO_MSG} "===>  Packages cleaning"
+.  if defined(PROFILE) && defined(_PACKAGE)
+	@cd ${.CURDIR} && exec ${MAKE} _check-profile PROFILE=${PROFILE}
+	@${RM} -rf ${_PACKAGE}
+.  else
 	@${RM} -rf ${PACKAGE_REPOSITORY}
+.  endif
 .endif
 
 #####################################################
@@ -384,3 +411,5 @@ _internal-list-profiles:
 list-profiles:
 	@cd ${.CURDIR} && exec ${MAKE} _internal-list-profiles
 
+test:
+	@echo "_PACKAGE is ${_PACKAGE}"
