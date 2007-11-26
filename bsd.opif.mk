@@ -204,11 +204,11 @@ ${_WRKDIR_COOKIE}:
 # Building a normalized .profile and .plist
 #####################################################
 ${PROFILE_NORM}: ${_WRKDIR_COOKIE} ${${PROFILE}_SOURCES}
-	@${ECHO_MSG} "===> Creating normalized profile for ${PROFILE}"
+	@${ECHO_MSG} ">> Creating normalized profile for ${PROFILE}"
 	@${_CREATE_PROFILE} | ${_PROFILE_REPLACE_TOKENS} > $@
 
 ${PLIST_NORM}: ${_WRKDIR_COOKIE} ${${PROFILE}_PLIST_SOURCES}
-	@${ECHO_MSG} "===> Creating normalized plist for ${PROFILE}"
+	@${ECHO_MSG} ">> Creating normalized plist for ${PROFILE}"
 	@${_CREATE_PLIST} | ${_PROFILE_REPLACE_TOKENS} > $@
 
 _internal-build:
@@ -218,6 +218,7 @@ _internal-build:
 		exec ${MAKE} build PROFILE=${_profile} _PROFILES_RECURS=true
 .  endfor
 .else
+	@${ECHO_MSG} "===> Building normalized profiles for ${PROFILE}"
 	@cd ${.CURDIR} && exec ${MAKE} _check-profile PROFILE=${PROFILE}
 	@cd ${.CURDIR} && exec ${MAKE} ${PROFILE_NORM} PROFILE=${PROFILE}
 	@cd ${.CURDIR} && exec ${MAKE} ${PLIST_NORM} PROFILE=${PROFILE}
@@ -285,21 +286,24 @@ _internal-fake:
 .  endfor
 .else
 	@cd ${.CURDIR} && exec ${MAKE} build PROFILE=${PROFILE}
+	@${ECHO_MSG} "===> Creating fake installation for ${PROFILE}"
 	@cd ${.CURDIR} && exec ${MAKE} ${_FAKE_MTREE_COOKIE} PROFILE=${PROFILE}
 	@cd ${.CURDIR} && exec ${MAKE} _install-dirs-and-files PROFILE=${PROFILE}
 .endif
 
 
 #####################################################
-# 
+# Package building
 #####################################################
 ${PACKAGE_REPOSITORY}:
 	@${RM} -rf ${PACKAGE_REPOSITORY}
 	@${MKDIR} -p ${PACKAGE_REPOSITORY}
 
 ${_PACKAGE}:
-	@${ECHO_MSG} "===> Creating site install set ${_PACKAGE}"
+	@${ECHO_MSG} ">> Creating site install set ${_PACKAGE}"
 	@cd ${WRKINST} && ${TAR} cpfz ${_PACKAGE} .
+
+_package-file: ${_PACKAGE}
 
 _internal-package:
 .if !defined(PROFILE) && !defined(_PROFILES_RECURS)
@@ -309,8 +313,9 @@ _internal-package:
 .  endfor
 .else
 	@cd ${.CURDIR} && exec ${MAKE} fake PROFILE=${PROFILE}
+	@${ECHO_MSG} "===> Packaging install set for ${PROFILE}"
 	@cd ${.CURDIR} && exec ${MAKE} ${PACKAGE_REPOSITORY} PROFILE=${PROFILE}
-	@cd ${.CURDIR} && exec ${MAKE} ${_PACKAGE} PROFILE=${PROFILE}
+	@cd ${.CURDIR} && exec ${MAKE} _package-file PROFILE=${PROFILE}
 .endif
 
 
@@ -410,6 +415,3 @@ _internal-list-profiles:
 
 list-profiles:
 	@cd ${.CURDIR} && exec ${MAKE} _internal-list-profiles
-
-test:
-	@echo "_PACKAGE is ${_PACKAGE}"
