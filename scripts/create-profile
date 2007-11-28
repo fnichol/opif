@@ -3,23 +3,23 @@ use strict;
 use warnings;
 
 ##
-# create-profile - creates a normalized profile
+# create-profile - creates a normalized profile or plist
 #
 # Author: Fletcher Nichol
 # $Id$
 ##
 
+use Getopt::Long;
+use Pod::Usage;
 use File::Basename;
 
-if ( $#ARGV > 1 ) {
-	&usage();
-	exit 1;
-}
-
+my %Options = ();
 my $Output;
 
 
 MAIN: {
+	&parse_opts();
+
 	my $input_file = $ARGV[0];
 
 	if ( $#ARGV == 1 ) {
@@ -39,8 +39,17 @@ MAIN: {
 }
 
 
-sub usage {
-	print "usage: " . basename( $0 ) . " <filename> [<outputfile>]\n";
+sub parse_opts {
+	GetOptions(  \%Options, "help|?", "man" ) or pod2usage(2);
+
+	# prints usage if --help option is specified
+	pod2usage( 1 )  if ( exists $Options{help} );
+
+	# prints a manpage if --man option is specified
+	pod2usage( -verbose => 2 )  if ( exists $Options{man} );
+
+	# if there are no files given, then exit
+	pod2usage("$0: no files given." )  if ( ( @ARGV == 0 ) && ( -t STDIN) );
 }
 
 
@@ -70,17 +79,31 @@ __END__
 
 =head1 NAME
 
-create-profile - creates a normalized profile
+create-profile - creates a normalized profile or plist
 
 =head1 SYNOPSIS
 
-B<create-profile> I<filename> [I<outputfile>]
+B<create-profile> [B<-p>] [B<-l>] I<filename> [I<outputfile>]
 
 =head1 DESCRIPTION
 
-B<create-profile> takes a profile template containing @include tokens and 
-writes a normalized profile to the specified output file or on the standard 
-output.
+B<create-profile> takes a profile or plist template containing @include 
+tokens and writes a normalized profile to the specified output file or on 
+the standard output.
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<--profile>, B<-p>
+
+parses I<filename> as a profile template. This is the default behavior.
+
+=item B<--plist>, B<-l>
+
+parses I<filename> as a plist template
+
+=back
 
 =head1 SEE ALSO
 
