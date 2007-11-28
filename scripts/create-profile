@@ -13,8 +13,8 @@ use Getopt::Long;
 use Pod::Usage;
 use File::Basename;
 
+# command line options
 my %Options = ();
-my $Output;
 
 
 MAIN: {
@@ -22,20 +22,9 @@ MAIN: {
 
 	my $input_file = $ARGV[0];
 
-	if ( $#ARGV == 1 ) {
-		my $output_file = $ARGV[1];
-		open(OUTFILE, ">$output_file");
-		$Output = *OUTFILE;
-	}
-	else {
-		$Output = *STDOUT;
-	}
-
-	&process_profile( $input_file );
-
-	if ( $#ARGV == 1 ) {
-		close(OUTFILE);
-	}
+	my $output = &output_open();
+	&process_profile( $input_file, $output );
+	close($output);
 }
 
 
@@ -53,10 +42,25 @@ sub parse_opts {
 }
 
 
-sub process_profile {
-	my ( $input_file ) = @_;
+sub output_open {
+	my $output;
 
-	open( my $file_handle, "<", $input_file ) 
+	if ( $#ARGV == 1 ) {
+		open( OUTFILE, ">" . $ARGV[1] );
+		$output = *OUTFILE;
+	}
+	else {
+		$output = *STDOUT;
+	}
+
+	return $output;
+}
+
+
+sub process_profile {
+	my ( $input_file, $output ) = @_;
+
+	open( my $file_handle, "<$input_file" ) 
 		or die "Cannot find profile $input_file\n";
 
 	while( <$file_handle> )
@@ -65,14 +69,15 @@ sub process_profile {
 			chomp;
 			my @include_line = split(/[ \t]+/);
 			my $include_file = dirname( $input_file ) . '/' . $include_line[1];
-			&process_profile( $include_file );
+			&process_profile( $include_file, $output );
 		}
 		elsif ( $_ !~ /^#[ \t]*\$Id[:\$]/ ) { 
-			print $Output "$_";
+			print $output "$_";
 		}
 	}
 	close( $file_handle );
 }
+
 
 __END__
 
