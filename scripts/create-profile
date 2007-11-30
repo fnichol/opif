@@ -16,6 +16,9 @@ use File::Basename;
 # command line options
 my %Options = ();
 
+# profile variable name/values
+my %Vars = ();
+
 
 MAIN: {
 	&parse_opts();
@@ -59,25 +62,94 @@ sub output_open {
 
 sub process_profile {
 	my ( $input_file, $output ) = @_;
+	my @multiple_lines = ();
 
 	open( my $file_handle, "<$input_file" ) 
 		or die "Cannot find profile $input_file\n";
 
 	while( <$file_handle> )
 	{
+		chomp;
+
+		# if there is a line continuation char `\', then add to $multiple_lines
+		if ( /^[^#]/ && /\\$/ ) {
+			push( @multiple_lines, $_ );
+			next;
+		}
+
+		&process_vars( \$_, $output, @multiple_lines );
+
 		if ( /^\@include[ \t]+.+$/ ) { 
-			chomp;
-			my @include_line = split(/[ \t]+/);
+			my @include_line = split( /[ \t]+/ );
 			my $include_file = dirname( $input_file ) . '/' . $include_line[1];
 			&process_profile( $include_file, $output );
 		}
-		elsif ( $_ !~ /^#[ \t]*\$Id[:\$]/ ) { 
-			print $output "$_";
+		elsif ( $_ !~ /^#[ \t]*\$Id[:\$]/ && scalar(@multiple_lines) == 0) { 
+			print $output "$_\n";
 		}
+		@multiple_lines = ();
 	}
 	close( $file_handle );
 }
 
+
+sub process_vars {
+	my ( $line, $output, @multiple_lines ) = @_;
+	my $var_line = $$line;
+
+	if ( scalar(@multiple_lines) > 0 ) {
+		# re-initialize this line to be empty
+		$var_line = '';
+
+		# push the last line onto the multiple line stack
+		push( @multiple_lines, $$line );
+
+		# run each line, replace all variable tokens, and then print it out
+		foreach my $m_line (@multiple_lines) {
+			foreach my $key (keys %Vars) {
+				my $val = $Vars{"$key"};
+				$m_line =~ s/\$\{$key\}/$val/g;
+			}
+			print $output "$m_line\n";
+			$m_line =~ s/\\$//;
+			$var_line .= $m_line;
+		}
+	}
+	else {
+		# if this is a single line, then replace all variable tokens
+		foreach my $key (keys %Vars) {
+			my $val = $Vars{"$key"};
+			$$line =~ s/\$\{$key\}/$val/g;
+			$var_line = $$line;
+		}
+	}
+
+	#
+	# if the line contains a "variable" (not a keyword line or comment), then
+	# save it
+	#
+	if ( $var_line !~ /^(pkg|obpf_patch)[\s]+/ && 
+			$var_line =~ /^[^@#]([^\s]+)[\s]+.*$/ ) {
+
+		my $var = my $val = $var_line;
+
+		$var =~ s/^([^\s]+)[\s]+.*$/$1/;
+		$val =~ s/^([^\s]+)[\s]+(.*)$/$2/;
+
+		# compress values/arguments to be seperated by one space
+		$val =~ s/[\s]{2,}/ /g;
+
+		# save the current var=val pair
+		$Vars{"$var"} = $val;
+
+		# add a convienience variable os ${osrev-short} which strips the period
+		if ( $var eq "osrev" ) {
+			my $osrev_short = $val;
+			$osrev_short =~ s/\.//;
+			$Vars{"osrev-short"} = $osrev_short;
+		}
+	}
+}
 
 __END__
 
