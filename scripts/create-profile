@@ -26,13 +26,20 @@ MAIN: {
 	my $input_file = $ARGV[0];
 
 	my $output = &output_open();
-	&process_profile( $input_file, $output );
+
+	if ( exists $Options{'plist'} ) {
+		&process_plist( $input_file, $output );
+	}
+	else {
+		&process_profile( $input_file, $output );
+	}
+
 	close($output);
 }
 
 
 sub parse_opts {
-	GetOptions(  \%Options, "help|?", "man" ) or pod2usage(2);
+	GetOptions(  \%Options, "help|?", "man", "plist|l" ) or pod2usage(2);
 
 	# prints usage if --help option is specified
 	pod2usage( 1 )  if ( exists $Options{help} );
@@ -67,8 +74,7 @@ sub process_profile {
 	open( my $file_handle, "<$input_file" ) 
 		or die "Cannot find profile $input_file\n";
 
-	while( <$file_handle> )
-	{
+	while( <$file_handle> ) {
 		chomp;
 
 		# if there is a line continuation char `\', then add to $multiple_lines
@@ -77,7 +83,7 @@ sub process_profile {
 			next;
 		}
 
-		&process_vars( \$_, $output, @multiple_lines );
+		&process_profile_vars( \$_, $output, @multiple_lines );
 
 		if ( /^\@include[ \t]+.+$/ ) { 
 			my @include_line = split( /[ \t]+/ );
@@ -93,7 +99,31 @@ sub process_profile {
 }
 
 
-sub process_vars {
+sub process_plist {
+	my ( $input_file, $output ) = @_;
+
+	open( my $file_handle, "<$input_file" ) 
+		or die "Cannot find profile $input_file\n";
+
+	while ( <$file_handle> ) {
+		chomp;
+
+		&process_plist_vars( \$_, $output );
+
+		if ( /^\@include[ \t]+.+$/ ) { 
+			my @include_line = split( /[ \t]+/ );
+			my $include_file = dirname( $input_file ) . '/' . $include_line[1];
+			&process_plist( $include_file, $output );
+		}
+		elsif ( $_ !~ /^#[ \t]*\$Id[:\$]/ ) { 
+			print $output "$_\n";
+		}
+	}
+	close( $file_handle );
+}
+
+
+sub process_profile_vars {
 	my ( $line, $output, @multiple_lines ) = @_;
 	my $var_line = $$line;
 
@@ -150,6 +180,33 @@ sub process_vars {
 		}
 	}
 }
+
+
+sub process_plist_vars {
+	my ( $line, $output ) = @_;
+
+	# replace all variable tokens
+	foreach my $key (keys %Vars) {
+		my $val = $Vars{"$key"};
+		$$line =~ s/\$\{$key\}/$val/g;
+	}
+
+	# if the line contains a "variable", then save it
+	if ( $$line !~ /^(dir|file|patch)[\s]+/ &&
+			$$line =~ /^[^@#]([^\s]+)[\s]+.*$/ ) {
+		my $var = my $val = $$line;
+
+		$var =~ s/^([^\s]+)[\s]+.*$/$1/;
+		$val =~ s/^([^\s]+)[\s]+(.*)$/$2/;
+
+		# compress values/arguments to be seperated by one space
+		$val =~ s/[\s]{2,}/ /g;
+
+		# save the current var=val pair
+		$Vars{"$var"} = $val;
+	}
+}
+
 
 __END__
 
