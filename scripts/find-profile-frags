@@ -9,15 +9,20 @@ use warnings;
 # $Id$
 ##
 
+use Getopt::Long;
+use Pod::Usage;
 use File::Basename;
 
-if ( $#ARGV > 0 ) {
-	&usage();
-	exit 1;
-}
+# command line options
+my %Options = ();
+
+# profile variable name/values
+my %Vars = ();
 
 
 MAIN: {
+	&parse_opts();
+
 	my $input_file = $ARGV[0];
 
 	&process_profile( $input_file );
@@ -26,8 +31,17 @@ MAIN: {
 }
 
 
-sub usage {
-	print "usage: " . basename( $0 ) . " <filename>\n";
+sub parse_opts {
+	GetOptions(  \%Options, "help|?", "man" ) or pod2usage(2);
+
+	# prints usage if --help option is specified
+	pod2usage( 1 )  if ( exists $Options{help} );
+
+	# prints a manpage if --man option is specified
+	pod2usage( -verbose => 2 )  if ( exists $Options{man} );
+
+	# if there are no files given, then exit
+	pod2usage("$0: no files given." )  if ( ( @ARGV == 0 ) && ( -t STDIN) );
 }
 
 
@@ -36,11 +50,13 @@ sub process_profile {
 
 	print "$input_file ";
 
-	open( my $file_handle, "<", $input_file ) 
+	open( my $file_handle, "<$input_file" ) 
 		or die "Cannot find profile $input_file\n";
 
 	while( <$file_handle> )
 	{
+		&process_vars( \$_ );
+
 		if ( /^\@include[ \t]+.+$/ ) { 
 			chomp;
 			my @include_line = split(/[ \t]+/);
@@ -50,6 +66,43 @@ sub process_profile {
 	}
 	close( $file_handle );
 }
+
+
+sub process_vars {
+	my ( $line, $output ) = @_;
+
+	# replace all variable tokens
+	foreach my $key (keys %Vars) {
+		my $val = $Vars{"$key"};
+		$$line =~ s/\$\{$key\}/$val/g;
+	}
+
+	# if the line contains a "variable", then save it
+	if ( $$line !~ /^(dir|file|patch|script)[\s]+/ &&
+			$$line =~ /^[^@#]([^\s]+)[\s]+.*$/ ) {
+		my $var = my $val = $$line;
+
+		$var =~ s/^([^\s]+)[\s]+.*$/$1/;
+		$val =~ s/^([^\s]+)[\s]+(.*)$/$2/;
+
+		chomp( $var );
+		chomp( $val );
+
+		# compress values/arguments to be seperated by one space
+		$val =~ s/[\s]{2,}/ /g;
+
+		# save the current var=val pair
+		$Vars{"$var"} = $val;
+
+		# add a convienience variable os ${osrev-short} which strips the period
+		if ( $var eq "osrev" ) {
+			my $osrev_short = $val;
+			$osrev_short =~ s/\.//;
+			$Vars{"osrev-short"} = $osrev_short;
+		}
+	}
+}
+
 
 __END__
 
