@@ -160,7 +160,7 @@ create-profile - creates a normalized profile or plist
 
 =head1 SYNOPSIS
 
-B<create-profile> [B<-p>] [B<-l>] I<filename> [I<outputfile>]
+B<create-profile> [B<-l>] I<filename> [I<outputfile>]
 
 =head1 DESCRIPTION
 
@@ -171,10 +171,6 @@ the standard output.
 =head1 OPTIONS
 
 =over 4
-
-=item B<--profile>, B<-p>
-
-parses I<filename> as a profile template. This is the default behavior.
 
 =item B<--plist>, B<-l>
 
