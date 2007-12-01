@@ -151,20 +151,7 @@ _EXTRA_INSTALLED_FILES = ${WRKINST}/site.profile ${_PACKAGE_SCRIPTS}
 _MAKE_COOKIE = ${TOUCH}
 
 _CREATE_PROFILE = ${SCRIPTSDIR}/create-profile ${PROFILE_FILE}
-_CREATE_PLIST = ${SCRIPTSDIR}/create-profile ${PLIST_FILE}
-
-_GET_TOKENS = \
-	_osrev="`${GREP} -E '^${KEY_OSREV}[[:space:]]+' ${PROFILE_FILE} | \
-		${SED} 's/^${KEY_OSREV}[[:space:]]\{1,\}\([0-9]\.[0-9]\)$$/\1/'`"; \
-	_osrev_short="`${ECHO} $$_osrev | ${SED} 's/\.//g'`"; \
-	_arch="`${GREP} -E '^${KEY_ARCH}[[:space:]]+' ${PROFILE_FILE} | \
-		${SED} 's/^${KEY_ARCH}[[:space:]]\{1,\}\(.*\)$$/\1/'`"; \
-	_hostname="`${GREP} -E '^${KEY_HOSTNAME}[[:space:]]+' ${PROFILE_FILE} | \
-		${SED} 's/^${KEY_HOSTNAME}[[:space:]]\{1,\}\(.*\)$$/\1/'`";
-
-
-#_PROFILE_REPLACE_TOKENS = ${SED} "s?\\$${OSREV}?${OSREV}?g"
-_PROFILE_REPLACE_TOKENS = cat -
+_CREATE_PLIST = ${SCRIPTSDIR}/create-profile -l ${PLIST_FILE}
 
 # Used to print all the '===>' style prompts -- override this to turn them off
 ECHO_MSG ?= ${ECHO}
@@ -219,11 +206,11 @@ ${_WRKDIR_COOKIE}:
 #####################################################
 ${PROFILE_NORM}: ${_WRKDIR_COOKIE} ${${PROFILE}_SOURCES}
 	@${ECHO_MSG} ">> Creating normalized profile for ${PROFILE}"
-	@${_CREATE_PROFILE} | ${_PROFILE_REPLACE_TOKENS} > $@
+	@${_CREATE_PROFILE} $@
 
 ${PLIST_NORM}: ${_WRKDIR_COOKIE} ${${PROFILE}_PLIST_SOURCES}
 	@${ECHO_MSG} ">> Creating normalized plist for ${PROFILE}"
-	@${_CREATE_PLIST} | ${_PROFILE_REPLACE_TOKENS} > $@
+	@${_CREATE_PLIST} $@
 
 _internal-build:
 .if !defined(PROFILE) && !defined(_PROFILES_RECURS)
