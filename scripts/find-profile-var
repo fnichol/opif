@@ -58,16 +58,8 @@ sub process_profile {
 			push( @multiple_lines, $_ );
 			next;
 		}
-
-		&process_profile_vars( \$_, $output, @multiple_lines );
-
-		if ( /^\@include[ \t]+.+$/ ) { 
-			my @include_line = split( /[ \t]+/ );
-			my $include_file = dirname( $input_file ) . '/' . $include_line[1];
-			&process_profile( $include_file, $output );
-		}
-		elsif ( $_ !~ /^#[ \t]*\$Id[:\$]/ && scalar(@multiple_lines) == 0) { 
-			print $output "$_\n";
+		else {
+			&process_profile_var( \$_, @multiple_lines );
 		}
 		@multiple_lines = ();
 	}
@@ -75,7 +67,7 @@ sub process_profile {
 }
 
 
-sub process_profile_vars {
+sub process_profile_var {
 	my ( $line @multiple_lines ) = @_;
 	my $var_line = $$line;
 
