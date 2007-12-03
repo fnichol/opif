@@ -1,0 +1,148 @@
+#!/usr/bin/perl -w
+use strict;
+use warnings;
+
+##
+# find-profile-var - returns the value of a profile value
+#
+# Author: Fletcher Nichol
+# $Id$
+##
+
+use Getopt::Long;
+use Pod::Usage;
+use File::Basename;
+
+# command line options
+my %Options = ();
+
+
+MAIN: {
+	&parse_opts();
+
+	my $input_file = $ARGV[0];
+
+	&process_profile( $input_file, $output );
+}
+
+
+sub parse_opts {
+	GetOptions(  \%Options, "help|?", "man", "variable|v" ) or pod2usage(2);
+
+	# prints usage if --help option is specified
+	pod2usage( 1 )  if ( exists $Options{help} );
+
+	# prints a manpage if --man option is specified
+	pod2usage( -verbose => 2 )  if ( exists $Options{man} );
+
+	# if no variable is asked for, then exit
+	pod2usage("$0: variable must be selected.") if ( !exists $Options{variable} );
+
+	# if there are no files given, then exit
+	pod2usage("$0: no files given." )  if ( ( @ARGV == 0 ) && ( -t STDIN) );
+}
+
+
+sub process_profile {
+	my ( $input_file ) = @_;
+	my @multiple_lines = ();
+
+	open( my $file_handle, "<$input_file" ) 
+		or die "Cannot find profile $input_file\n";
+
+	while( <$file_handle> ) {
+		chomp;
+
+		# if there is a line continuation char `\', then add to $multiple_lines
+		if ( /^[^#]/ && /\\$/ ) {
+			push( @multiple_lines, $_ );
+			next;
+		}
+
+		&process_profile_vars( \$_, $output, @multiple_lines );
+
+		if ( /^\@include[ \t]+.+$/ ) { 
+			my @include_line = split( /[ \t]+/ );
+			my $include_file = dirname( $input_file ) . '/' . $include_line[1];
+			&process_profile( $include_file, $output );
+		}
+		elsif ( $_ !~ /^#[ \t]*\$Id[:\$]/ && scalar(@multiple_lines) == 0) { 
+			print $output "$_\n";
+		}
+		@multiple_lines = ();
+	}
+	close( $file_handle );
+}
+
+
+sub process_profile_vars {
+	my ( $line @multiple_lines ) = @_;
+	my $var_line = $$line;
+
+	if ( scalar(@multiple_lines) > 0 ) {
+		# re-initialize this line to be empty
+		$var_line = '';
+
+		# push the last line onto the multiple line stack
+		push( @multiple_lines, $$line );
+
+		# run each line, replace all variable tokens, and then print it out
+		foreach my $m_line (@multiple_lines) {
+			$m_line =~ s/\\$//;
+			$var_line .= $m_line;
+		}
+	}
+
+	#
+	# if the line contains a "variable" (not a keyword line or comment), then
+	# save it
+	#
+	if ( $var_line !~ /^(pkg|obpf_patch|user|group|script)[\s]+/ && 
+			$var_line =~ /^[^@#]([^\s]+)[\s]+.*$/ ) {
+
+		my $var = my $val = $var_line;
+
+		$var =~ s/^([^\s]+)[\s]+.*$/$1/;
+		$val =~ s/^([^\s]+)[\s]+(.*)$/$2/;
+
+		# compress values/arguments to be seperated by one space
+		$val =~ s/[\s]{2,}/ /g;
+
+		# save the current var=val pair
+		$Vars{"$var"} = $val;
+	}
+}
+
+
+__END__
+
+
+=head1 NAME
+
+find-profile-var - returns the value of a profile value
+
+=head1 SYNOPSIS
+
+B<find-profile-var> B<-v> I<var> I<profile>
+
+=head1 DESCRIPTION
+
+B<calc-pkgpath> .
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<--variable>, B<-v>
+
+the variable to be searched on in the profile file
+
+=back
+
+=head1 SEE ALSO
+
+perl(1)
+
+=head1 AUTHOR
+
+Fletcher Nichol
