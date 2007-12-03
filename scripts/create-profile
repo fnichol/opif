@@ -158,7 +158,7 @@ sub process_profile_vars {
 	# if the line contains a "variable" (not a keyword line or comment), then
 	# save it
 	#
-	if ( $var_line !~ /^(pkg|obpf_patch|script)[\s]+/ && 
+	if ( $var_line !~ /^(pkg|obpf_patch|user|group|script)[\s]+/ && 
 			$var_line =~ /^[^@#]([^\s]+)[\s]+.*$/ ) {
 
 		my $var = my $val = $var_line;
