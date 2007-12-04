@@ -7,27 +7,33 @@
 # $Id$
 ##
 
-# used if filesystem root is mounted in a place other than /
-if [ -z "$MNTROOT" ]; then
-	MNTROOT=
-fi
+initialize()
+{
+	# used if filesystem root is mounted in a place other than /
+	if [ -z "$MNTROOT" ]; then
+		MNTROOT=
+	fi
 
-# hostname of the installed system
-HOSTNAME="`/usr/bin/nawk -F'.' '{print $1}' ${MNTROOT}/etc/myname`"
+	# hostname of the installed system
+	HOSTNAME="`/usr/bin/nawk -F'.' '{print $1}' ${MNTROOT}/etc/myname`"
 
-# extra system configuration/script files directory
-if [ -z "$SI_CONFIG_DIR" ]; then
-	SI_CONFIG_DIR=/tmp/install_config
-fi
+	# extra system configuration/script files directory
+	if [ -z "$SI_CONFIG_DIR" ]; then
+		SI_CONFIG_DIR=${MNTROOT}/var/tmp/opif
+	fi
 
-# site configuration profile
-if [ -z "$PROFILE" ]; then
-	PROFILE=${MNTROOT}/site.profile
-fi
+	# site configuration profile
+	if [ -z "$PROFILE" ]; then
+		PROFILE=${MNTROOT}/site.profile
+	fi
 
-export MNTROOT HOSTNAME SI_CONFIG_DIR PROFILE
+	export MNTROOT HOSTNAME SI_CONFIG_DIR PROFILE
 
-# import subroutines
-. ${MNTROOT}/install.site.sub
+	# import subroutines
+	. ${SI_CONFIG_DIR}/install.site.sub
+}
+
+
+initialize
 
 exit 0
