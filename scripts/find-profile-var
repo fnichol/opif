@@ -13,8 +13,13 @@ use Getopt::Long;
 use Pod::Usage;
 use File::Basename;
 
+
+# profile filehandle to be parsed
+my $File_handle;
+
 # command line options
 my %Options = ();
+my $Variable;
 
 
 MAIN: {
@@ -22,12 +27,15 @@ MAIN: {
 
 	my $input_file = $ARGV[0];
 
-	&process_profile( $input_file, $output );
+	&process_profile( $input_file );
+
+	# if we get to here, then we have not found the variable
+	exit 10;
 }
 
 
 sub parse_opts {
-	GetOptions(  \%Options, "help|?", "man", "variable|v" ) or pod2usage(2);
+	GetOptions(  \%Options, "help|?", "man", "variable|v=s" ) or pod2usage(2);
 
 	# prints usage if --help option is specified
 	pod2usage( 1 )  if ( exists $Options{help} );
@@ -37,6 +45,7 @@ sub parse_opts {
 
 	# if no variable is asked for, then exit
 	pod2usage("$0: variable must be selected.") if ( !exists $Options{variable} );
+	$Variable = $Options{variable};
 
 	# if there are no files given, then exit
 	pod2usage("$0: no files given." )  if ( ( @ARGV == 0 ) && ( -t STDIN) );
@@ -47,10 +56,10 @@ sub process_profile {
 	my ( $input_file ) = @_;
 	my @multiple_lines = ();
 
-	open( my $file_handle, "<$input_file" ) 
+	open( $File_handle, "<$input_file" ) 
 		or die "Cannot find profile $input_file\n";
 
-	while( <$file_handle> ) {
+	while( <$File_handle> ) {
 		chomp;
 
 		# if there is a line continuation char `\', then add to $multiple_lines
@@ -63,12 +72,12 @@ sub process_profile {
 		}
 		@multiple_lines = ();
 	}
-	close( $file_handle );
+	close( $File_handle );
 }
 
 
 sub process_profile_var {
-	my ( $line @multiple_lines ) = @_;
+	my ( $line, @multiple_lines ) = @_;
 	my $var_line = $$line;
 
 	if ( scalar(@multiple_lines) > 0 ) {
@@ -95,13 +104,17 @@ sub process_profile_var {
 		my $var = my $val = $var_line;
 
 		$var =~ s/^([^\s]+)[\s]+.*$/$1/;
-		$val =~ s/^([^\s]+)[\s]+(.*)$/$2/;
 
-		# compress values/arguments to be seperated by one space
-		$val =~ s/[\s]{2,}/ /g;
+		if ( $var =~ /^$Variable$/i ) {
+			$val =~ s/^([^\s]+)[\s]+(.*)$/$2/;
 
-		# save the current var=val pair
-		$Vars{"$var"} = $val;
+			# compress values/arguments to be seperated by one space
+			$val =~ s/[\s]{2,}/ /g;
+
+			print "$val\n";
+			close( $File_handle );
+			exit 0;
+		}
 	}
 }
 
