@@ -37,5 +37,8 @@ initialize()
 
 
 initialize
+execPrescripts
+#addPackages
+#execPostscripts
 
 exit 0
