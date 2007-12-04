@@ -14,9 +14,16 @@ Xargs=/usr/bin/xargs
 
 Info="===>"
 
-calcPkgPath()
+
+getProfileVar()
 {
+	[ -z "$1" ] && return 1
+	var="$1"
+
+	${SI_CONFIG_DIR}/find-profile-var --variable=$var ${PROFILE}
+	return $?
 }
+
 
 addPackages()
 {
