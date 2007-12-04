@@ -74,6 +74,7 @@ FAKEDIR ?= ${WRKDIR}/fake-${ARCH}
 
 KEY_HOSTNAME = hostname
 KEY_OSREV = osrev
+KEY_OSREV_SHORT = osrev-short
 KEY_ARCH = arch
 
 
@@ -101,13 +102,19 @@ PLIST_NORM = ${WRKDIR}/${PROFILE}.plist
 
 WRKINST = ${FAKEDIR}/${PROFILE}
 WRKINSTPATCHES = ${WRKINST}/tmp/patchfiles
+WRKINSTSCRIPTS = ${WRKINST}/var/tmp/opif
 
 .if exists(${PROFILE_NORM})
-_PACKAGE != ${ECHO} ${PACKAGE_REPOSITORY}/site`${GREP} -E '^osrev[[:space:]]+' \
-	${PROFILE_NORM} | ${SED} \
-	's/^osrev[[:space:]]\{1,\}\([0-9]\)\.\([0-9]\)$$/\1\2/'`-`${GREP} -E \
-	'^hostname[[:space:]]+' ${PROFILE_NORM} | \
-	${SED} 's/^hostname[[:space:]]\{1,\}\([[:alnum:]]\{1,\}\)$$/\1/'`.tgz
+_GET_OSREV = ${SCRIPTSDIR}/find-profile-var -v ${KEY_OSREV} ${PROFILE_NORM}
+_GET_OSREV_SHORT = ${SCRIPTSDIR}/find-profile-var -v ${KEY_OSREV_SHORT} \
+	${PROFILE_NORM}
+_GET_ARCH = ${SCRIPTSDIR}/find-profile-var -v ${KEY_ARCH} ${PROFILE_NORM}
+_GET_HOSTNAME = ${SCRIPTSDIR}/find-profile-var -v ${KEY_HOSTNAME} \
+	${PROFILE_NORM}
+
+_CREATE_PROFILE = ${SCRIPTSDIR}/create-profile ${PROFILE_FILE}
+
+_PACKAGE != ${ECHO} ${PACKAGE_REPOSITORY}/site`${_GET_OSREV_SHORT}`-`${_GET_HOSTNAME}`.tgz
 .endif
 
 .  if exists(${PLIST_NORM})
@@ -142,8 +149,9 @@ _PLIST_INSTALLED_DIRS_AR != \
 _WRKDIR_COOKIE = ${WRKDIR}/.wrkdir_done
 _FAKE_MTREE_COOKIE = ${WRKINST}
 
-_PACKAGE_SCRIPTS = ${SCRIPTSDIR}/install.site ${SCRIPTSDIR}/install.site.sub
-_EXTRA_INSTALLED_FILES = ${WRKINST}/site.profile ${_PACKAGE_SCRIPTS}
+_PACKAGE_SCRIPTS = ${SCRIPTSDIR}/install.site.sub ${SCRIPTSDIR}/find-profile-var
+_EXTRA_INSTALLED_FILES = ${WRKINST}/site.profile ${WRKINST}/install.site \
+	${_PACKAGE_SCRIPTS}
 
 #
 # Common commands and operations
@@ -238,7 +246,7 @@ ${_FAKE_MTREE_COOKIE}:
 
 .for _file in ${_PLIST_INSTALLED_FILES_AR}
 ${_file:C/^.*\|//:C/@.*$//}: ${_file:C/\|.*$//}
-	@echo ">> Installing ${_file:C/^.*\|//:C/@.*$//}"
+	@${ECHO_MSG} ">> Installing ${_file:C/^.*\|//:C/@.*$//}"
 	@perms=`echo "${_file:C/^.*@//}" | awk -F':' '{ print $$1 }'`; \
 	user=`echo "${_file:C/^.*@//}" | awk -F':' '{ print $$2 }'`; \
 	group=`echo "${_file:C/^.*@//}" | awk -F':' '{ print $$3 }'`; \
@@ -248,13 +256,13 @@ ${_file:C/^.*\|//:C/@.*$//}: ${_file:C/\|.*$//}
 
 .for _file in ${_PLIST_INSTALLED_PATCHES_AR}
 ${_file:C/^.*\|//}: ${_file:C/\|.*$//}
-	@echo ">> Installing ${_file:C/^.*\|//}"
+	@${ECHO_MSG} ">> Installing ${_file:C/^.*\|//}"
 	@${INSTALL} -m 0644 -o 0 -g 0 ${_file:C/\|.*$//} `dirname ${_file:C/^.*\|//}`
 .endfor
 
 .for _file in ${_PLIST_INSTALLED_DIRS_AR}
 ${_file:C/@.*$//}:
-	@echo ">> Making directory ${_file:C/@.*$//}"
+	@${ECHO_MSG} ">> Making directory ${_file:C/@.*$//}"
 	@perms=`echo "${_file:C/^.*@//}" | awk -F':' '{ print $$1 }'`; \
 	user=`echo "${_file:C/^.*@//}" | awk -F':' '{ print $$2 }'`; \
 	group=`echo "${_file:C/^.*@//}" | awk -F':' '{ print $$3 }'`; \
@@ -262,12 +270,16 @@ ${_file:C/@.*$//}:
 .endfor
 
 ${WRKINST}/site.profile: ${PROFILE_NORM}
-	@echo ">> Installing ${WRKINST}/site.profile"
+	@${ECHO_MSG} ">> Installing $@"
 	@${INSTALL} -m 0444 -o 0 -g 0 ${PROFILE_NORM} $@
 
+${WRKINST}/install.site: ${SCRIPTSDIR}/install.site
+	@${ECHO_MSG} ">> Installing $@"
+	@${INSTALL} -m 0555 -o 0 -g 0 ${SCRIPTSDIR}/install.site $@
+
 .for _f in ${_PACKAGE_SCRIPTS}
-${WRKINST}/${_f:T}: ${_f}
-	@echo ">> Installing ${WRKINST}/${_f:T}"
+${WRKINSTSCRIPTS}/${_f:T}: ${_f}
+	@${ECHO_MSG} ">> Installing ${WRKINSTSCRIPTS}/${_f:T}"
 	@${INSTALL} -m 0555 -o 0 -g 0 ${_f} $@
 .endfor
 	
@@ -282,10 +294,11 @@ _install-dirs-and-files:
 .for _f in ${_PLIST_INSTALLED_PATCHES_AR}
 	@cd ${.CURDIR} && exec ${MAKE} ${_f:C/^.*\|//} PROFILE=${PROFILE}
 .endfor
-.for _f in ${_PACKAGE_SCRIPTS}
-	@cd ${.CURDIR} && exec ${MAKE} ${WRKINST}/${_f:T} PROFILE=${PROFILE}
-.endfor
 	@cd ${.CURDIR} && exec ${MAKE} ${WRKINST}/site.profile PROFILE=${PROFILE}
+	@cd ${.CURDIR} && exec ${MAKE} ${WRKINST}/install.site PROFILE=${PROFILE}
+.for _f in ${_PACKAGE_SCRIPTS}
+	@cd ${.CURDIR} && exec ${MAKE} ${WRKINSTSCRIPTS}/${_f:T} PROFILE=${PROFILE}
+.endfor
 
 _internal-fake:
 .if !defined(PROFILE) && !defined(_PROFILES_RECURS)
