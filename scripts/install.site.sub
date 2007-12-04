@@ -57,7 +57,6 @@ i_execScripts()
 	[ "$1" != "pre" -a "$1" != "post" ] && return 2
 	prefix="$1"
 
-
 	scripts="`getKeywordList ${prefix}script | tr ',' ' '`"
 
 	if [ -n "$scripts" ]; then
@@ -107,7 +106,7 @@ addPackages()
 
 fetchFile()
 {
-	[ -z "$1" || -z "$2" ] && return 1
+	[ -z "$1" -o -z "$2" ] && return 1
 	file="$1"
 	shift
 	sites="$@"
