@@ -7,3 +7,28 @@
 # $Id$
 ##
 
+Echo_msg=/bin/echo
+Nawk=/usr/bin/nawk
+Pkg_add=/usr/sbin/pkg_add
+Xargs=/usr/bin/xargs
+
+Info="===>"
+
+calcPkgPath()
+{
+}
+
+addPackages()
+{
+	$Echo_msg "$Info Install packages ..."
+
+	calcPkgPath
+
+	packages="`$Nawk '\
+		BEGIN { FS=\"[ \t]+\" } \
+		{ if ($1 == \"pkg\") printf \"%s\n\", $2 }' $PROFILE | $Xargs`"
+
+	for pkg in $packages; do
+		$Pkg_add $pkg
+	done
+}
