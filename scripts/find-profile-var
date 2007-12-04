@@ -21,6 +21,9 @@ my $File_handle;
 my %Options = ();
 my $Variable;
 
+# reserved profile keywords that are not considered variables
+my $RESERVED_KEYWORDS = "pkg|obpf_patch|user|group|prescript|postscript";
+
 
 MAIN: {
 	&parse_opts();
@@ -98,7 +101,7 @@ sub process_profile_var {
 	# if the line contains a "variable" (not a keyword line or comment), then
 	# save it
 	#
-	if ( $var_line !~ /^(pkg|obpf_patch|user|group|script)[\s]+/ && 
+	if ( $var_line !~ /^($RESERVED_KEYWORDS)[\s]+/ && 
 			$var_line =~ /^[^@#]([^\s]+)[\s]+.*$/ ) {
 
 		my $var = my $val = $var_line;
