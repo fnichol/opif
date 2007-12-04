@@ -7,13 +7,17 @@
 # $Id$
 ##
 
-Echo_msg=/bin/echo
+Echo=/bin/echo
 Egrep=/usr/bin/egrep
+Ftp=/usr/bin/ftp
 Nawk=/usr/bin/nawk
 Pkg_add=/usr/sbin/pkg_add
 Sed=/usr/bin/sed
 Tr=/usr/bin/tr
 Xargs=/usr/bin/xargs
+
+Echo_msg=$Echo
+Fetch_cmd="$Ftp -V -m"
 
 Info="===>"
 Info_detail=">>"
@@ -92,4 +96,24 @@ addPackages()
 	for pkg in $packages; do
 		$Pkg_add $pkg
 	done
+}
+
+
+fetchFile()
+{
+	[ -z "$1" || -z "$2" ] && return 1
+	file="$1"
+	shift
+	sites="$@"
+
+	for site in $sites; do
+		$Echo_msg "$Info_detail ${site}${file}."
+		if $Fetch_cmd ${site}${file}; then
+			# file has been successfully downloaded
+			return 0;
+		fi
+	done
+	
+	# if we make it this far, then no suitable site was found for the file
+	return 10
 }
