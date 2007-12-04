@@ -8,8 +8,11 @@
 ##
 
 Echo_msg=/bin/echo
+Egrep=/usr/bin/egrep
 Nawk=/usr/bin/nawk
 Pkg_add=/usr/sbin/pkg_add
+Sed=/usr/bin/sed
+Tr=/usr/bin/tr
 Xargs=/usr/bin/xargs
 
 Info="===>"
@@ -20,21 +23,40 @@ getProfileVar()
 	[ -z "$1" ] && return 1
 	var="$1"
 
-	${SI_CONFIG_DIR}/find-profile-var --variable=$var ${PROFILE}
+	${SI_CONFIG_DIR}/find-profile-var --variable=$var $PROFILE
 	return $?
 }
 
+getKeywordList()
+{
+	[ -z "$1" ] && return 1
+	keyword="$1"
+
+	list="`$Egrep \"^$keyword[[:space:]]+\" $PROFILE | \
+		$Sed -e \"s|^$keyword[[:space:]]\{1,\}||\" | $Tr '\n' ',' | \
+		$Sed -e 's|,$|\\\|' | $Tr '\\\' '\n'`"
+
+	if [ -n "$list" ]; then
+		echo "$list"
+		return 0
+	else
+		return 10
+	fi
+}
+
+i_exportPkgPath()
+{
+	PKG_PATH=`getProfileVar pkg_sites | tr ' ' ':'`
+	export PKG_PATH
+}
 
 addPackages()
 {
 	$Echo_msg "$Info Install packages ..."
 
-	calcPkgPath
+	i_exportPkgPath
 
-	packages="`$Nawk '\
-		BEGIN { FS=\"[ \t]+\" } \
-		{ if ($1 == \"pkg\") printf \"%s\n\", $2 }' $PROFILE | $Xargs`"
-
+	packages="`getKeywordList pkg | tr ',' ' '`"
 	for pkg in $packages; do
 		$Pkg_add $pkg
 	done
