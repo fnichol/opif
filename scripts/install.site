@@ -15,7 +15,9 @@ initialize()
 	fi
 
 	# hostname of the installed system
-	HOSTNAME="`/usr/bin/nawk -F'.' '{print $1}' ${MNTROOT}/etc/myname`"
+	if [ -z "$HOSTNAME" ]; then
+		HOSTNAME="`/usr/bin/nawk -F'.' '{print $1}' ${MNTROOT}/etc/myname`"
+	fi
 
 	# extra system configuration/script files directory
 	if [ -z "$SI_CONFIG_DIR" ]; then
