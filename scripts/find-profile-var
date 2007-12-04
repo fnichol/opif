@@ -104,12 +104,19 @@ sub process_profile_var {
 		my $var = my $val = $var_line;
 
 		$var =~ s/^([^\s]+)[\s]+.*$/$1/;
+		$val =~ s/^([^\s]+)[\s]+(.*)$/$2/;
+
+		# compress values/arguments to be seperated by one space
+		$val =~ s/[\s]{2,}/ /g;
 
 		if ( $var =~ /^$Variable$/i ) {
-			$val =~ s/^([^\s]+)[\s]+(.*)$/$2/;
-
-			# compress values/arguments to be seperated by one space
-			$val =~ s/[\s]{2,}/ /g;
+			print "$val\n";
+			close( $File_handle );
+			exit 0;
+		}
+		elsif ( $Variable =~ /^osrev-short$/ && $var =~ /^osrev$/ ) {
+			# remove the dot in osrev
+			$val =~ s/([\d])\.([\d])/$1$2/g;
 
 			print "$val\n";
 			close( $File_handle );
