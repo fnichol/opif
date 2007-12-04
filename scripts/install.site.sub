@@ -16,6 +16,7 @@ Tr=/usr/bin/tr
 Xargs=/usr/bin/xargs
 
 Info="===>"
+Info_detail=">>"
 
 
 getProfileVar()
@@ -26,6 +27,7 @@ getProfileVar()
 	${SI_CONFIG_DIR}/find-profile-var --variable=$var $PROFILE
 	return $?
 }
+
 
 getKeywordList()
 {
@@ -44,11 +46,41 @@ getKeywordList()
 	fi
 }
 
+
+i_execScripts()
+{
+	[ -z "$1" ] && return 1
+	[ "$1" != "pre" && "$1" != "post" ] && return 2
+	prefix="$1"
+
+	$Echo_msg "$Info Executing ${prefix}-scripts ..."
+
+	scripts="`getKeywordList ${prefix}script | tr ',' ' '`"
+	for script in $scripts; do
+		$Echo_msg "$Info_detail Script ${SI_CONFIG_DIR}/$script"
+		. ${SI_CONFIG_DIR}/$script
+	done
+}
+
+
+execPrescripts()
+{
+	i_execScripts pre
+}
+
+
+execPostscripts()
+{
+	i_execScripts post
+}
+
+
 i_exportPkgPath()
 {
 	PKG_PATH=`getProfileVar pkg_sites | tr ' ' ':'`
 	export PKG_PATH
 }
+
 
 addPackages()
 {
