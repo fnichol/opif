@@ -54,12 +54,18 @@ getKeywordList()
 i_execScripts()
 {
 	[ -z "$1" ] && return 1
-	[ "$1" != "pre" && "$1" != "post" ] && return 2
+	[ "$1" != "pre" -a "$1" != "post" ] && return 2
 	prefix="$1"
 
-	$Echo_msg "$Info Executing ${prefix}-scripts ..."
 
 	scripts="`getKeywordList ${prefix}script | tr ',' ' '`"
+
+	if [ -n "$scripts" ]; then
+		$Echo_msg "$Info Executing ${prefix}-scripts ..."
+	else
+		$Echo_msg "$Info No ${prefix}-scripts"
+	fi
+
 	for script in $scripts; do
 		$Echo_msg "$Info_detail Script ${SI_CONFIG_DIR}/$script"
 		. ${SI_CONFIG_DIR}/$script
