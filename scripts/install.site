@@ -37,8 +37,14 @@ initialize()
 
 
 initialize
+
 execPrescripts
+
 addPackages
+
+addUsersAndGroups
+
 execPostscripts
+
 
 exit 0
