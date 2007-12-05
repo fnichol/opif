@@ -25,6 +25,47 @@ Fetch_cmd="$Ftp -V -m"
 
 Info="===>"
 Info_detail=">>"
+Info_error=">>>>"
+
+Install_site_log=/var/log/install.site.log
+
+
+i_printInfo()
+{
+	[ -z "$1" -o -z "$2" ] && return 1
+	prefix="$1"
+	shift
+	msg="$@"
+
+	$Echo_msg "$prefix" "$msg" | $Tee -a $Install_site_log
+}
+
+
+infoMsg()
+{
+	[ -z "$1" ] && return 1
+	msg="$1"
+
+	i_printInfo "$Info" "$msg"
+}
+
+
+infoDetail()
+{
+	[ -z "$1" ] && return 1
+	msg="$1"
+
+	i_printInfo "$Info_detail" "$msg"
+}
+
+
+infoError()
+{
+	[ -z "$1" ] && return 1
+	msg="$1"
+
+	i_printInfo "$Info_error" "$msg"
+}
 
 
 getProfileVar()
@@ -63,7 +104,7 @@ fetchFile()
 	sites="$@"
 
 	for site in $sites; do
-		$Echo_msg "$Info_detail ${site}${file}."
+		infoDetail "${site}${file}."
 		if $Fetch_cmd ${site}${file}; then
 			# file has been successfully downloaded
 			return 0;
@@ -71,6 +112,7 @@ fetchFile()
 	done
 	
 	# if we make it this far, then no suitable site was found for the file
+	infoError "File $file could not be downloaded from site list=[${sites}]"
 	return 10
 }
 
@@ -84,13 +126,13 @@ i_execScripts()
 	scripts="`getKeywordList ${prefix}script | tr ',' ' '`"
 
 	if [ -n "$scripts" ]; then
-		$Echo_msg "$Info Executing ${prefix}-scripts ..."
+		infoMsg "Executing ${prefix}-scripts ..."
 	else
-		$Echo_msg "$Info No ${prefix}-scripts"
+		infoMsg "No ${prefix}-scripts"
 	fi
 
 	for script in $scripts; do
-		$Echo_msg "$Info_detail Script ${SI_CONFIG_DIR}/$script"
+		infoDetail "Script ${SI_CONFIG_DIR}/$script"
 		. ${SI_CONFIG_DIR}/$script
 	done
 }
@@ -110,14 +152,17 @@ execPostscripts()
 
 patchSystemFiles()
 {
-	$Echo_msg "$Info Patching system files ..."
+	infoMsg "Patching system files ..."
 
 	patchfiles="`$Find ${MNTROOT}/tmp/patchfiles -type f -name *.patch | \
 		$Xargs`"
 
 	for patchfile in $patchfiles; do
-		$Echo_msg "$Info_detail Patching with $patchfile"
-		(cd ${MNTROOT}/; $Patch -s -p1 < $patchfile)
+		infoDetail "Patching with $patchfile"
+		cd ${MNTROOT}/
+		if ! $Patch -s -p1 < $patchfile; then
+			infoError "Patchfile $patchfile was not properly processed."
+		fi
 	done
 }
 
@@ -131,30 +176,35 @@ i_exportPkgPath()
 
 addPackages()
 {
-	$Echo_msg "$Info Install packages ..."
+	infoMsg "Install packages ..."
 
 	i_exportPkgPath
+	if [ -z "$PKG_PATH" ]; then
+		infoError "Environment variable PKG_PATH was not properly set."
+	fi
 
 	packages="`getKeywordList pkg | tr ',' ' '`"
 	for pkg in $packages; do
-		$Pkg_add $pkg
+		infoDetail "Installing $pkg"
+		if ! $Pkg_add $pkg; then
+			infoError "Package $pkg could not be installed."
+		fi
 	done
 }
 
 
 i_addGroups()
 {
-	$Echo_msg "$Info Adding groups ..."
+	infoMsg "Adding groups ..."
 
 	getKeywordList group | tr ',' '\n' | while read user_line; do
 		group="`$Echo $user_line | $Nawk -F':' '{ print $1 }'`"
 		gid="`$Echo $user_line | $Nawk -F':' '{ print $3 }'`"
 
-		$Echo_msg "$Info_detail Group ${group}:${gid}"
+		infoDetail "Group ${group}:${gid}"
 
 		if ! $Groupadd -g $gid $group; then
-			$Echo_msg \
-				"${Info_detail}${Info_detail} Group $group could not be added."
+			infoError "Group $group could not be added."
 		fi
 	done
 }
@@ -162,7 +212,7 @@ i_addGroups()
 
 i_addUsers()
 {
-	$Echo_msg "$Info Adding users ..."
+	infoMsg "Adding users ..."
 
 	getKeywordList user | tr ',' '\n' | while read user_line; do
 		user="`$Echo $user_line | $Nawk -F':' '{ print $1 }'`"
@@ -179,12 +229,11 @@ i_addUsers()
 			password_str="-p $password"
 		fi
 
-		$Echo_msg "$Info_detail User ${user}:${uid}:${gid}"
+		infoDetail "User ${user}:${uid}:${gid}"
 
 		if ! $Useradd $password_str -u $uid -g $gid -c "$comment" \
 				-d "$home" -m -s $shell $user; then
-			$Echo_msg \
-				"${Info_detail}${Info_detail} User $user could not be added."
+			infoError "User $user could not be added."
 		fi
 	done
 }
