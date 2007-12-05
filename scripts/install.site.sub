@@ -13,6 +13,7 @@ Find=/usr/bin/find
 Ftp=/usr/bin/ftp
 Groupadd=/usr/sbin/groupadd
 Nawk=/usr/bin/nawk
+Patch=/usr/bin/patch
 Pkg_add=/usr/sbin/pkg_add
 Sed=/usr/bin/sed
 Tr=/usr/bin/tr
