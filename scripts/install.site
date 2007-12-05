@@ -40,6 +40,8 @@ initialize
 
 execPrescripts
 
+patchSystemFiles
+
 addPackages
 
 addUsersAndGroups
