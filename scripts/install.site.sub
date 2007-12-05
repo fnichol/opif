@@ -55,6 +55,26 @@ getKeywordList()
 }
 
 
+fetchFile()
+{
+	[ -z "$1" -o -z "$2" ] && return 1
+	file="$1"
+	shift
+	sites="$@"
+
+	for site in $sites; do
+		$Echo_msg "$Info_detail ${site}${file}."
+		if $Fetch_cmd ${site}${file}; then
+			# file has been successfully downloaded
+			return 0;
+		fi
+	done
+	
+	# if we make it this far, then no suitable site was found for the file
+	return 10
+}
+
+
 i_execScripts()
 {
 	[ -z "$1" ] && return 1
@@ -88,6 +108,20 @@ execPostscripts()
 }
 
 
+patchSystemFiles()
+{
+	$Echo_msg "$Info Patching system files ..."
+
+	patchfiles="`$Find ${MNTROOT}/tmp/patchfiles -type f -name *.patch | \
+		$Xargs`"
+
+	for patchfile in $patchfiles; do
+		$Echo_msg "$Info_detail Patching with $patchfile"
+		(cd ${MNTROOT}/; $Patch -s -p1 < $patchfile)
+	done
+}
+
+
 i_exportPkgPath()
 {
 	PKG_PATH=`getProfileVar pkg_sites | tr ' ' ':'`
@@ -105,26 +139,6 @@ addPackages()
 	for pkg in $packages; do
 		$Pkg_add $pkg
 	done
-}
-
-
-fetchFile()
-{
-	[ -z "$1" -o -z "$2" ] && return 1
-	file="$1"
-	shift
-	sites="$@"
-
-	for site in $sites; do
-		$Echo_msg "$Info_detail ${site}${file}."
-		if $Fetch_cmd ${site}${file}; then
-			# file has been successfully downloaded
-			return 0;
-		fi
-	done
-	
-	# if we make it this far, then no suitable site was found for the file
-	return 10
 }
 
 
@@ -180,18 +194,4 @@ addUsersAndGroups()
 {
 	i_addGroups
 	i_addUsers
-}
-
-
-patchSystemFiles()
-{
-	$Echo_msg "$Info Patching system files ..."
-
-	patchfiles="`$Find ${MNTROOT}/tmp/patchfiles -type f -name *.patch | \
-		$Xargs`"
-
-	for patchfile in $patchfiles; do
-		$Echo_msg "$Info_detail Patching with $patchfile"
-		(cd ${MNTROOT}/; $Patch -s -p1 < $patchfile)
-	done
 }
