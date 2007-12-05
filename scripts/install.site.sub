@@ -16,6 +16,7 @@ Nawk=/usr/bin/nawk
 Patch=/usr/bin/patch
 Pkg_add=/usr/sbin/pkg_add
 Sed=/usr/bin/sed
+Tee=/usr/bin/tee
 Tr=/usr/bin/tr
 Useradd=/usr/sbin/useradd
 Xargs=/usr/bin/xargs
