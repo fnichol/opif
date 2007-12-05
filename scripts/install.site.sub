@@ -10,10 +10,12 @@
 Echo=/bin/echo
 Egrep=/usr/bin/egrep
 Ftp=/usr/bin/ftp
+Groupadd=/usr/sbin/groupadd
 Nawk=/usr/bin/nawk
 Pkg_add=/usr/sbin/pkg_add
 Sed=/usr/bin/sed
 Tr=/usr/bin/tr
+Useradd=/usr/sbin/useradd
 Xargs=/usr/bin/xargs
 
 Echo_msg=$Echo
@@ -121,4 +123,59 @@ fetchFile()
 	
 	# if we make it this far, then no suitable site was found for the file
 	return 10
+}
+
+
+i_addGroups()
+{
+	$Echo_msg "$Info Adding groups ..."
+
+	getKeywordList group | tr ',' '\n' | while read user_line; do
+		group="`$Echo $user_line | $Nawk -F':' '{ print $1 }'`"
+		gid="`$Echo $user_line | $Nawk -F':' '{ print $3 }'`"
+
+		$Echo_msg "$Info_detail Group ${group}:${gid}"
+
+		if ! $Groupadd -g $gid $group; then
+			$Echo_msg \
+				"${Info_detail}${Info_detail} Group $group could not be added."
+		fi
+	done
+}
+
+
+i_addUsers()
+{
+	$Echo_msg "$Info Adding users ..."
+
+	getKeywordList user | tr ',' '\n' | while read user_line; do
+		user="`$Echo $user_line | $Nawk -F':' '{ print $1 }'`"
+		password="`$Echo $user_line | $Nawk -F':' '{ print $2 }'`"
+		uid="`$Echo $user_line | $Nawk -F':' '{ print $3 }'`"
+		gid="`$Echo $user_line | $Nawk -F':' '{ print $4 }'`"
+		comment="`$Echo $user_line | $Nawk -F':' '{ print $5 }'`"
+		home="`$Echo $user_line | $Nawk -F':' '{ print $6 }'`"
+		shell="`$Echo $user_line | $Nawk -F':' '{ print $7 }'`"
+
+		if [ "$password" = "*" ]; then
+			password_str=""
+		else
+			password_str="-p $password"
+		fi
+
+		$Echo_msg "$Info_detail User ${user}:${uid}:${gid}"
+
+		if ! $Useradd $password_str -u $uid -g $gid -c "$comment" \
+				-d "$home" -m -s $shell $user; then
+			$Echo_msg \
+				"${Info_detail}${Info_detail} User $user could not be added."
+		fi
+	done
+}
+
+
+addUsersAndGroups()
+{
+	i_addGroups
+	i_addUsers
 }
