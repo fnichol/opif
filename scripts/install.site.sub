@@ -191,6 +191,6 @@ patchSystemFiles()
 
 	for patchfile in $patchfiles; do
 		$Echo_msg "$Info_detail Patching with $patchfile"
-		(cd ${MNTROOT}/; $Patch -p1 --quiet < $patchfile)
+		(cd ${MNTROOT}/; $Patch -s -p1 < $patchfile)
 	done
 }
