@@ -44,6 +44,8 @@ patchSystemFiles
 
 addPackages
 
+applyOSPatches
+
 addUsersAndGroups
 
 execPostscripts

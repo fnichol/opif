@@ -13,8 +13,10 @@ Find=/usr/bin/find
 Ftp=/usr/bin/ftp
 Groupadd=/usr/sbin/groupadd
 Nawk=/usr/bin/nawk
+Obpf=/usr/local/bin/obpf
 Patch=/usr/bin/patch
 Pkg_add=/usr/sbin/pkg_add
+Pkg_info=/usr/sbin/pkg_info
 Sed=/usr/bin/sed
 Tee=/usr/bin/tee
 Tr=/usr/bin/tr
@@ -124,7 +126,7 @@ i_execScripts()
 	[ "$1" != "pre" -a "$1" != "post" ] && return 2
 	prefix="$1"
 
-	scripts="`getKeywordList ${prefix}script | tr ',' ' '`"
+	scripts="`getKeywordList ${prefix}script | $Tr ',' ' '`"
 
 	if [ -n "$scripts" ]; then
 		infoMsg "Executing ${prefix}-scripts ..."
@@ -168,9 +170,26 @@ patchSystemFiles()
 }
 
 
+applyOSPatches()
+{
+	infoMsg "Applying OS patches ..."
+
+	if ! $Pkg_info | $Nawk '{print $1}' | $Egrep '^obpf-' > /dev/null; then
+		infoError "Package obpf must be installed for OS patching to work."
+		return 50
+	fi
+
+	obpf_sites="`getProfileVar obpf_sites | $Tr ' ' ':'`"
+	patches="`getKeywordList obpf_patch | ',' ':'`"
+
+	$Obpf --backup=no --pack=no --force \
+		--patchurl="$obpf_sites" --install "$patches"
+}
+
+
 i_exportPkgPath()
 {
-	PKG_PATH=`getProfileVar pkg_sites | tr ' ' ':'`
+	PKG_PATH=`getProfileVar pkg_sites | $Tr ' ' ':'`
 	export PKG_PATH
 }
 
@@ -184,7 +203,7 @@ addPackages()
 		infoError "Environment variable PKG_PATH was not properly set."
 	fi
 
-	packages="`getKeywordList pkg | tr ',' ' '`"
+	packages="`getKeywordList pkg | $Tr ',' ' '`"
 	for pkg in $packages; do
 		infoDetail "Installing $pkg"
 		if ! $Pkg_add $pkg; then
@@ -198,7 +217,7 @@ i_addGroups()
 {
 	infoMsg "Adding groups ..."
 
-	getKeywordList group | tr ',' '\n' | while read user_line; do
+	getKeywordList group | $Tr ',' '\n' | while read user_line; do
 		group="`$Echo $user_line | $Nawk -F':' '{ print $1 }'`"
 		gid="`$Echo $user_line | $Nawk -F':' '{ print $3 }'`"
 
@@ -215,7 +234,7 @@ i_addUsers()
 {
 	infoMsg "Adding users ..."
 
-	getKeywordList user | tr ',' '\n' | while read user_line; do
+	getKeywordList user | $Tr ',' '\n' | while read user_line; do
 		user="`$Echo $user_line | $Nawk -F':' '{ print $1 }'`"
 		password="`$Echo $user_line | $Nawk -F':' '{ print $2 }'`"
 		uid="`$Echo $user_line | $Nawk -F':' '{ print $3 }'`"
