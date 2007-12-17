@@ -4,8 +4,8 @@
         skel
         ..
     ..
-    tmp
-        patchfiles
+    tmp type=dir uname=root gname=wheel mode=1777
+        patchfiles type=dir uname=root gname=wheel mode=0755
         ..
     ..
     var
