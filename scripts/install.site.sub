@@ -180,7 +180,7 @@ applyOSPatches()
 	fi
 
 	obpf_sites="`getProfileVar obpf_sites | $Tr ' ' ':'`"
-	patches="`getKeywordList obpf_patch | ',' ' '`"
+	patches="`getKeywordList obpf_patch | $Tr ',' ' '`"
 
 	HOME=/root $Obpf --backup=no --pack=no --force \
 		--patchurl="$obpf_sites" --install $patches
