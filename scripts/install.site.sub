@@ -13,7 +13,6 @@ Find=/usr/bin/find
 Ftp=/usr/bin/ftp
 Groupadd=/usr/sbin/groupadd
 Nawk=/usr/bin/nawk
-Obpf=/usr/local/bin/obpf
 Patch=/usr/bin/patch
 Pkg_add=/usr/sbin/pkg_add
 Pkg_info=/usr/sbin/pkg_info
@@ -86,8 +85,8 @@ getKeywordList()
 	[ -z "$1" ] && return 1
 	local keyword="$1"
 
-	local list="`$Egrep \"^$keyword[[:space:]]+\" $PROFILE | \
-		$Sed -e \"s|^$keyword[[:space:]]\{1,\}||\" | $Tr '\n' ',' | \
+	local list="`$Egrep \"^@$keyword[[:space:]]+\" $PROFILE | \
+		$Sed -e \"s|^@$keyword[[:space:]]\{1,\}||\" | $Tr '\n' ',' | \
 		$Sed -e 's|,$|\\\|' | $Tr '\\\' '\n'`"
 
 	if [ -n "$list" ]; then
@@ -153,139 +152,97 @@ execPostscripts()
 }
 
 
-patchSystemFiles()
-{
-	infoMsg "Patching system files ..."
-
-	local patchfiles="`$Find ${MNTROOT}/tmp/patchfiles -type f -name *.patch | \
-		$Xargs`"
-
-	for patchfile in $patchfiles; do
-		infoDetail "Patching with $patchfile"
-		cd ${MNTROOT}/
-		if ! $Patch -s -p1 < $patchfile; then
-			infoError "Patchfile $patchfile was not properly processed."
-		fi
-	done
-}
-
-
-applyOSPatches()
-{
-	infoMsg "Applying OS patches ..."
-
-	if ! $Pkg_info | $Nawk '{print $1}' | $Egrep '^obpf-' > /dev/null; then
-		infoError "Package obpf must be installed for OS patching to work."
-		return 50
-	fi
-
-	local obpf_sites="`getProfileVar obpf_sites | $Tr ' ' ':'`"
-	local patches="`getKeywordList obpf_patch | $Tr ',' ' '`"
-
-	HOME=/root $Obpf --backup=no --pack=no --force \
-		--patchurl="$obpf_sites" --install $patches
-}
-
-
-i_exportPkgPath()
+exportPkgPath()
 {
 	PKG_PATH=`getProfileVar pkg_sites | $Tr ' ' ':'`
 	export PKG_PATH
 }
 
 
-addPackages()
+pkgAdd()
 {
-	infoMsg "Install packages ..."
+	[ -z "$1" ] && return 1
+	local pkg="$1"
 
-	i_exportPkgPath
-	if [ -z "$PKG_PATH" ]; then
-		infoError "Environment variable PKG_PATH was not properly set."
+	infoDetail "Installing $pkg"
+	if ! $Pkg_add $pkg; then
+		infoError "Package $pkg could not be installed."
 	fi
-
-	packages="`getKeywordList pkg | $Tr ',' ' '`"
-	for pkg in $packages; do
-		infoDetail "Installing $pkg"
-		if ! $Pkg_add $pkg; then
-			infoError "Package $pkg could not be installed."
-		fi
-	done
-}
-
-
-i_addGroups()
-{
-	infoMsg "Adding groups ..."
-
-	getKeywordList group | $Tr ',' '\n' | while read user_line; do
-		local group="`$Echo $user_line | $Nawk -F':' '{ print $1 }'`"
-		local gid="`$Echo $user_line | $Nawk -F':' '{ print $3 }'`"
-
-		infoDetail "Group ${group}:${gid}"
-
-		if ! $Groupadd -g $gid $group; then
-			infoError "Group $group could not be added."
-		fi
-	done
-}
-
-
-i_addUsers()
-{
-	infoMsg "Adding users ..."
-
-	getKeywordList user | $Tr ',' '\n' | while read user_line; do
-		local user="`$Echo $user_line | $Nawk -F':' '{ print $1 }'`"
-		local password="`$Echo $user_line | $Nawk -F':' '{ print $2 }'`"
-		local uid="`$Echo $user_line | $Nawk -F':' '{ print $3 }'`"
-		local gid="`$Echo $user_line | $Nawk -F':' '{ print $4 }'`"
-		local comment="`$Echo $user_line | $Nawk -F':' '{ print $5 }'`"
-		local home="`$Echo $user_line | $Nawk -F':' '{ print $6 }'`"
-		local shell="`$Echo $user_line | $Nawk -F':' '{ print $7 }'`"
-
-		if [ "$password" = "*" ]; then
-			local password_str=""
-		else
-			local password_str="-p $password"
-		fi
-
-		infoDetail "User ${user}:${uid}:${gid}"
-
-		if ! $Useradd $password_str -u $uid -g $gid -c "$comment" \
-				-d "$home" -m -s $shell $user; then
-			infoError "User $user could not be added."
-		fi
-	done
-}
-
-
-addUsersAndGroups()
-{
-	i_addGroups
-	i_addUsers
 }
 
 
 loadModules()
 {
-	echo "hi"
+	infoMsg "Loading modules ..."
+
+	MODULES="`getKeywordList module | $Tr ',' ' '`"
+
+	for module in core $MODULES; do
+		infoDetail "Loading module $module"
+		. ${SI_CONFIG_DIR}/${module}.module
+	done
+
+	infoMsg "Loading modules complete."
+}
+
+
+i_execPrePostStageModules()
+{
+	[ -z "$1" -o -z "$2" ] && return 1
+	[ "$1" != "pre" -a "$1" != "post" ] && return 2
+	[ "$2" != "stage1" -a "$2" != "stage2" -a "$2" != "stage3" ] && return 3
+	local prefix="$1"
+	local stage="$2"
+
+	for module in core $MODULES; do
+		local func="${module}_${prefix}_${stage}"
+		if typeset -f $func > /dev/null; then
+			eval $func
+		fi
+	done
+}
+
+
+i_execStageModules()
+{
+	[ -z "$1" ] && return 1
+	[ "$1" != "stage1" -a "$1" != "stage2" -a "$1" != "stage3" ] && return 2
+	local stage="$1"
+
+	for module in core $MODULES; do
+		local func="${module}_${stage}"
+		if typeset -f $func > /dev/null; then
+			eval $func
+		fi
+	done
 }
 
 
 execStage1()
 {
-	applyOSPatches
-	patchSystemFiles
+	i_execPrePostStageModules pre stage1
+
+	i_execStageModules stage1
+
+	i_execPrePostStageModules post stage1
 }
 
 
 execStage2()
 {
-	addPackages
+	i_execPrePostStageModules pre stage2
+
+	i_execStageModules stage2
+
+	i_execPrePostStageModules post stage2
 }
 
 
 execStage3()
 {
-	addUsersAndGroups
+	i_execPrePostStageModules pre stage3
+
+	i_execStageModules stage3
+
+	i_execPrePostStageModules post stage3
 }
