@@ -29,7 +29,11 @@ initialize()
 		PROFILE=${MNTROOT}/site.profile
 	fi
 
-	export MNTROOT HOSTNAME SI_CONFIG_DIR PROFILE
+	if [ -z "$MODULES" ]; then
+		MODULES=
+	fi
+
+	export MNTROOT HOSTNAME SI_CONFIG_DIR PROFILE MODULES
 
 	# import subroutines
 	. ${SI_CONFIG_DIR}/install.site.sub
@@ -38,15 +42,13 @@ initialize()
 
 initialize
 
+loadModules
+
 execPrescripts
 
-patchSystemFiles
-
-addPackages
-
-applyOSPatches
-
-addUsersAndGroups
+execStage1
+execStage2
+execStage3
 
 execPostscripts
 
