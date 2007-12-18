@@ -1,0 +1,120 @@
+#!/bin/sh
+
+core_validate()
+{
+	if ! getProfileVar osrev > /dev/null; then
+		infoError "Profile variable osrev must exist."
+		return 1
+	fi
+
+	if ! getProfileVar arch > /dev/null; then
+		infoError "Profile variable osrev must exist."
+		return 2
+	fi
+
+	if ! getProfileVar hostname > /dev/null; then
+		infoError "Profile variable osrev must exist."
+		return 3
+	fi
+
+	return 0
+}
+
+
+i_applyPatchfiles()
+{
+	infoMsg "Patching system files ..."
+
+	local patchfiles="`$Find ${MNTROOT}/tmp/patchfiles -type f -name *.patch | \
+		$Xargs`"
+
+	for patchfile in $patchfiles; do
+		infoDetail "Patching with $patchfile"
+		cd ${MNTROOT}/
+		if ! $Patch -s -p1 < $patchfile; then
+			infoError "Patchfile $patchfile was not properly processed."
+		fi
+	done
+}
+
+
+core_stage1()
+{
+	i_applyPatchfiles
+}
+
+
+i_addPackages()
+{
+	infoMsg "Install packages ..."
+
+	exportPkgPath
+
+	if [ -z "$PKG_PATH" ]; then
+		infoError "Environment variable PKG_PATH was not properly set."
+	fi
+
+	packages="`getKeywordList pkg | $Tr ',' ' '`"
+	for pkg in $packages; do
+		pkgAdd $pkg
+	done
+}
+
+
+core_stage2()
+{
+	i_addPackages
+}
+
+
+i_addGroups()
+{
+	infoMsg "Adding groups ..."
+
+	getKeywordList group | $Tr ',' '\n' | while read user_line; do
+		local group="`$Echo $user_line | $Nawk -F':' '{ print $1 }'`"
+		local gid="`$Echo $user_line | $Nawk -F':' '{ print $3 }'`"
+
+		infoDetail "Group ${group}:${gid}"
+
+		if ! $Groupadd -g $gid $group; then
+			infoError "Group $group could not be added."
+		fi
+	done
+}
+
+
+i_addUsers()
+{
+	infoMsg "Adding users ..."
+
+	getKeywordList user | $Tr ',' '\n' | while read user_line; do
+		local user="`$Echo $user_line | $Nawk -F':' '{ print $1 }'`"
+		local password="`$Echo $user_line | $Nawk -F':' '{ print $2 }'`"
+		local uid="`$Echo $user_line | $Nawk -F':' '{ print $3 }'`"
+		local gid="`$Echo $user_line | $Nawk -F':' '{ print $4 }'`"
+		local comment="`$Echo $user_line | $Nawk -F':' '{ print $5 }'`"
+		local home="`$Echo $user_line | $Nawk -F':' '{ print $6 }'`"
+		local shell="`$Echo $user_line | $Nawk -F':' '{ print $7 }'`"
+
+		if [ "$password" = "*" ]; then
+			local password_str=""
+		else
+			local password_str="-p $password"
+		fi
+
+		infoDetail "User ${user}:${uid}:${gid}"
+
+		if ! $Useradd $password_str -u $uid -g $gid -c "$comment" \
+				-d "$home" -m -s $shell $user; then
+			infoError "User $user could not be added."
+		fi
+	done
+}
+
+
+core_stage3()
+{
+	i_addGroups
+	i_addUsers
+}

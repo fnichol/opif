@@ -1,0 +1,45 @@
+#!/bin/sh
+
+Obpf=/usr/local/bin/obpf
+
+obpf_validate()
+{
+	if ! getProfileVar obpf_sites > /dev/null; then
+		infoError "Profile variable obpf_sites must exist."
+		return 1
+	fi
+
+	if ! getKeywordList obpf_pkg > /dev/null; then
+		infoError "At least one profile keyword @obpf_pkg must exist."
+		return 1
+	fi
+
+	return 0
+}
+
+
+obpf_pre_stage1()
+{
+	exportPkgPath
+
+	local obpf_pkg="`getKeywordList obpf_pkg | $Tr ' ' ':'`"
+
+	pkgAdd $obpf_pkg
+}
+
+
+obpf_stage1()
+{
+	infoMsg "Applying obpf OS patches ..."
+
+	if ! $Pkg_info | $Nawk '{print $1}' | $Egrep '^obpf-' > /dev/null; then
+		infoError "Package obpf must be installed for OS patching to work."
+		return 50
+	fi
+
+	local obpf_sites="`getProfileVar obpf_sites | $Tr ' ' ':'`"
+	local patches="`getKeywordList obpf_patch | $Tr ',' ' '`"
+
+	HOME=/root $Obpf --backup=no --pack=no --force \
+		--patchurl="$obpf_sites" --install $patches
+}

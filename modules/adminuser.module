@@ -1,0 +1,24 @@
+#!/bin/sh
+
+adminuser_validate()
+{
+	if ! getKeywordList adminuser > /dev/null; then
+		infoError "At least one profile keyword @adminuser must exist."
+		return 1
+	fi
+
+}
+
+adminuser_stage3()
+{
+	infoMsg "Adding users to wheel group for system administration ..."
+
+	local admins="`getKeywordList adminuser | $Tr ',' ' '`"
+
+	for admin in $admins; do
+		infoDetail "Adding $admin to wheel group."
+		if ! $Usermod -G wheel $admin; then
+			infoError "Could not add $admin to group wheel."
+		fi
+	done
+}
