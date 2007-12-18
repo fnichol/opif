@@ -20,6 +20,7 @@ Sed=/usr/bin/sed
 Tee=/usr/bin/tee
 Tr=/usr/bin/tr
 Useradd=/usr/sbin/useradd
+Usermod=/usr/sbin/usermod
 Xargs=/usr/bin/xargs
 
 Echo_msg=$Echo
