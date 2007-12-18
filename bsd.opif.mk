@@ -65,6 +65,7 @@ ARCH ?= ${MACHINE}
 #
 PROFDIR ?= ${.CURDIR}/profiles
 SCRIPTSDIR ?= ${.CURDIR}/scripts
+MODULESDIR ?= ${.CURDIR}/modules
 FILESDIR ?= ${.CURDIR}/files
 PACKAGE_REPOSITORY = ${.CURDIR}/packages
 PROFILE_MTREE ?= ${SCRIPTSDIR}/profile.mtree
@@ -117,6 +118,16 @@ _CREATE_PROFILE = ${SCRIPTSDIR}/create-profile ${PROFILE_FILE}
 _PACKAGE != ${ECHO} ${PACKAGE_REPOSITORY}/site`${_GET_OSREV_SHORT}`-`${_GET_HOSTNAME}`.tgz
 .endif
 
+MODULE_SCRIPTS = ${MODULESDIR}/core.module
+
+.  if exists(${PROFILE_NORM})
+_MODULE_OTHER_SCRIPTS != \
+	${NAWK} 'BEGIN { FS = "[ \t]+" } \
+		{ if ( $$1 == "@module" )  printf "${MODULESDIR}/%s.module\n",$$2 }' \
+		$(PROFILE_NORM)
+MODULE_SCRIPTS += ${_MODULE_OTHER_SCRIPTS}
+.  endif
+
 .  if exists(${PLIST_NORM})
 _PLIST_ALL_FILES != \
 	${NAWK} 'BEGIN { FS = "[ \t]+" } \
@@ -149,7 +160,8 @@ _PLIST_INSTALLED_DIRS_AR != \
 _WRKDIR_COOKIE = ${WRKDIR}/.wrkdir_done
 _FAKE_MTREE_COOKIE = ${WRKINST}
 
-_PACKAGE_SCRIPTS = ${SCRIPTSDIR}/install.site.sub ${SCRIPTSDIR}/find-profile-var
+_PACKAGE_SCRIPTS = ${SCRIPTSDIR}/install.site.sub \
+	${SCRIPTSDIR}/find-profile-var ${MODULE_SCRIPTS}
 _EXTRA_INSTALLED_FILES = ${WRKINST}/site.profile ${WRKINST}/install.site \
 	${_PACKAGE_SCRIPTS}
 
@@ -363,18 +375,13 @@ _check-profile:
 .endif
 
 _check-profile-syntax:
-	@if ! grep '^${KEY_OSREV}[[:space:]]\{1,\}' ${PROFILE_NORM} > /dev/null; then \
-		${ECHO_MSG} ">> Keyword "${KEY_OSREV}" must be defined in profile ${PROFILE}."; \
-		exit 1; \
-	fi
-	@if ! grep '^${KEY_ARCH}[[:space:]]\{1,\}' ${PROFILE_NORM} > /dev/null; then \
-		${ECHO_MSG} ">> Keyword "${KEY_ARCH}" must be defined in profile ${PROFILE}."; \
-		exit 1; \
-	fi
-	@if ! grep '^${KEY_HOSTNAME}[[:space:]]\{1,\}' ${PROFILE_NORM} > /dev/null; then \
-		${ECHO_MSG} ">> Keyword "${KEY_HOSTNAME}" must be defined in profile ${PROFILE}."; \
-		exit 1; \
-	fi
+.for module in ${MODULE_SCRIPTS}
+	@. ${SCRIPTSDIR}/install.site.sub && . ${module} && \
+		if typeset -f ${module:T:C/\.module$//}_validate > /dev/null; then \
+			eval SI_CONFIG_DIR=${SCRIPTSDIR} PROFILE=${PROFILE_NORM} \
+				${module:T:C/\.module$//}_validate; \
+		fi
+.endfor
 
 _check-plist-files:
 	@for file in ${_PLIST_ALL_FILES}; do \
