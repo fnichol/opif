@@ -448,11 +448,3 @@ _internal-list-profiles:
 
 list-profiles:
 	@cd ${.CURDIR} && exec ${MAKE} _internal-list-profiles
-
-test:
-	@${_GET_TOKENS} \
-		echo "_osrev is $$_osrev"; \
-		echo "_osrev_short is $$_osrev_short"; \
-		echo "_arch is $$_arch"; \
-		echo "_hostname is $$_hostname"
-
