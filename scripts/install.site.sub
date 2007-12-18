@@ -36,9 +36,9 @@ Install_site_log=/var/log/install.site.log
 i_printInfo()
 {
 	[ -z "$1" -o -z "$2" ] && return 1
-	prefix="$1"
+	local prefix="$1"
 	shift
-	msg="$@"
+	local msg="$@"
 
 	$Echo_msg "$prefix" "$msg" | $Tee -a $Install_site_log
 }
@@ -47,7 +47,7 @@ i_printInfo()
 infoMsg()
 {
 	[ -z "$1" ] && return 1
-	msg="$1"
+	local msg="$1"
 
 	i_printInfo "$Info" "$msg"
 }
@@ -56,7 +56,7 @@ infoMsg()
 infoDetail()
 {
 	[ -z "$1" ] && return 1
-	msg="$1"
+	local msg="$1"
 
 	i_printInfo "$Info_detail" "$msg"
 }
@@ -65,7 +65,7 @@ infoDetail()
 infoError()
 {
 	[ -z "$1" ] && return 1
-	msg="$1"
+	local msg="$1"
 
 	i_printInfo "$Info_error" "$msg"
 }
@@ -74,7 +74,7 @@ infoError()
 getProfileVar()
 {
 	[ -z "$1" ] && return 1
-	var="$1"
+	local var="$1"
 
 	${SI_CONFIG_DIR}/find-profile-var --variable=$var $PROFILE
 	return $?
@@ -84,9 +84,9 @@ getProfileVar()
 getKeywordList()
 {
 	[ -z "$1" ] && return 1
-	keyword="$1"
+	local keyword="$1"
 
-	list="`$Egrep \"^$keyword[[:space:]]+\" $PROFILE | \
+	local list="`$Egrep \"^$keyword[[:space:]]+\" $PROFILE | \
 		$Sed -e \"s|^$keyword[[:space:]]\{1,\}||\" | $Tr '\n' ',' | \
 		$Sed -e 's|,$|\\\|' | $Tr '\\\' '\n'`"
 
@@ -102,9 +102,9 @@ getKeywordList()
 fetchFile()
 {
 	[ -z "$1" -o -z "$2" ] && return 1
-	file="$1"
+	local file="$1"
 	shift
-	sites="$@"
+	local sites="$@"
 
 	for site in $sites; do
 		infoDetail "${site}${file}."
@@ -124,9 +124,9 @@ i_execScripts()
 {
 	[ -z "$1" ] && return 1
 	[ "$1" != "pre" -a "$1" != "post" ] && return 2
-	prefix="$1"
+	local prefix="$1"
 
-	scripts="`getKeywordList ${prefix}script | $Tr ',' ' '`"
+	local scripts="`getKeywordList ${prefix}script | $Tr ',' ' '`"
 
 	if [ -n "$scripts" ]; then
 		infoMsg "Executing ${prefix}-scripts ..."
@@ -157,7 +157,7 @@ patchSystemFiles()
 {
 	infoMsg "Patching system files ..."
 
-	patchfiles="`$Find ${MNTROOT}/tmp/patchfiles -type f -name *.patch | \
+	local patchfiles="`$Find ${MNTROOT}/tmp/patchfiles -type f -name *.patch | \
 		$Xargs`"
 
 	for patchfile in $patchfiles; do
@@ -179,8 +179,8 @@ applyOSPatches()
 		return 50
 	fi
 
-	obpf_sites="`getProfileVar obpf_sites | $Tr ' ' ':'`"
-	patches="`getKeywordList obpf_patch | $Tr ',' ' '`"
+	local obpf_sites="`getProfileVar obpf_sites | $Tr ' ' ':'`"
+	local patches="`getKeywordList obpf_patch | $Tr ',' ' '`"
 
 	HOME=/root $Obpf --backup=no --pack=no --force \
 		--patchurl="$obpf_sites" --install $patches
@@ -218,8 +218,8 @@ i_addGroups()
 	infoMsg "Adding groups ..."
 
 	getKeywordList group | $Tr ',' '\n' | while read user_line; do
-		group="`$Echo $user_line | $Nawk -F':' '{ print $1 }'`"
-		gid="`$Echo $user_line | $Nawk -F':' '{ print $3 }'`"
+		local group="`$Echo $user_line | $Nawk -F':' '{ print $1 }'`"
+		local gid="`$Echo $user_line | $Nawk -F':' '{ print $3 }'`"
 
 		infoDetail "Group ${group}:${gid}"
 
@@ -235,18 +235,18 @@ i_addUsers()
 	infoMsg "Adding users ..."
 
 	getKeywordList user | $Tr ',' '\n' | while read user_line; do
-		user="`$Echo $user_line | $Nawk -F':' '{ print $1 }'`"
-		password="`$Echo $user_line | $Nawk -F':' '{ print $2 }'`"
-		uid="`$Echo $user_line | $Nawk -F':' '{ print $3 }'`"
-		gid="`$Echo $user_line | $Nawk -F':' '{ print $4 }'`"
-		comment="`$Echo $user_line | $Nawk -F':' '{ print $5 }'`"
-		home="`$Echo $user_line | $Nawk -F':' '{ print $6 }'`"
-		shell="`$Echo $user_line | $Nawk -F':' '{ print $7 }'`"
+		local user="`$Echo $user_line | $Nawk -F':' '{ print $1 }'`"
+		local password="`$Echo $user_line | $Nawk -F':' '{ print $2 }'`"
+		local uid="`$Echo $user_line | $Nawk -F':' '{ print $3 }'`"
+		local gid="`$Echo $user_line | $Nawk -F':' '{ print $4 }'`"
+		local comment="`$Echo $user_line | $Nawk -F':' '{ print $5 }'`"
+		local home="`$Echo $user_line | $Nawk -F':' '{ print $6 }'`"
+		local shell="`$Echo $user_line | $Nawk -F':' '{ print $7 }'`"
 
 		if [ "$password" = "*" ]; then
-			password_str=""
+			local password_str=""
 		else
-			password_str="-p $password"
+			local password_str="-p $password"
 		fi
 
 		infoDetail "User ${user}:${uid}:${gid}"
@@ -263,4 +263,29 @@ addUsersAndGroups()
 {
 	i_addGroups
 	i_addUsers
+}
+
+
+loadModules()
+{
+	echo "hi"
+}
+
+
+execStage1()
+{
+	applyOSPatches
+	patchSystemFiles
+}
+
+
+execStage2()
+{
+	addPackages
+}
+
+
+execStage3()
+{
+	addUsersAndGroups
 }
