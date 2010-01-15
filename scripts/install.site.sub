@@ -17,6 +17,7 @@ Patch=/usr/bin/patch
 Pkg_add=/usr/sbin/pkg_add
 Pkg_info=/usr/sbin/pkg_info
 Sed=/usr/bin/sed
+Tar=/bin/tar
 Tee=/usr/bin/tee
 Tr=/usr/bin/tr
 Useradd=/usr/sbin/useradd
@@ -168,6 +169,18 @@ pkgAdd()
 	infoDetail "Installing $pkg"
 	if ! $Pkg_add $pkg; then
 		infoError "Package $pkg could not be installed."
+	fi
+}
+
+
+installBundle()
+{
+	[ -z "$1" ] && return 1
+	local bundle="$1"
+
+	infoDetail "Installing $bundle"
+	if ! $Tar zxpf $bundle -C ${MNTROOT}/; then
+		infoError "Bundle $bundle could not be installed."
 	fi
 }
 

@@ -103,6 +103,7 @@ PLIST_NORM = ${WRKDIR}/${PROFILE}.plist
 
 WRKINST = ${FAKEDIR}/${PROFILE}
 WRKINSTPATCHES = ${WRKINST}/tmp/patchfiles
+WRKINSTBUNDLES = ${WRKINST}/tmp/bundles
 WRKINSTSCRIPTS = ${WRKINST}/var/tmp/opif
 
 .if exists(${PROFILE_NORM})
@@ -137,6 +138,10 @@ _PLIST_ALL_PATCHES != \
 	${NAWK} 'BEGIN { FS = "[ \t]+" } \
 		{ if ( $$1 == "patch" )  printf "${FILESDIR}/%s\n",$$2 }' $(PLIST_NORM)
 
+_PLIST_ALL_BUNDLES != \
+	${NAWK} 'BEGIN { FS = "[ \t]+" } \
+		{ if ( $$1 == "bundles" )  printf "${FILESDIR}/%s\n",$$2 }' $(PLIST_NORM)
+
 _PLIST_INSTALLED_FILES_AR != \
 	${NAWK} 'BEGIN { FS = "[ \t]+" } \
 		{ if ( $$1 == "file" ) { filename = $$2; sub(/.*\//, "", filename); \
@@ -147,6 +152,12 @@ _PLIST_INSTALLED_PATCHES_AR != \
 	${NAWK} 'BEGIN { FS = "[ \t]+" } \
 		{ if ( $$1 == "patch" ) { filename = $$2; sub(/.*\//, "", filename); \
 		printf "${FILESDIR}/%s|${WRKINSTPATCHES}/%s\n", \
+		$$2, filename } }' $(PLIST_NORM)
+
+_PLIST_INSTALLED_BUNDLES_AR != \
+	${NAWK} 'BEGIN { FS = "[ \t]+" } \
+		{ if ( $$1 == "bundle" ) { filename = $$2; sub(/.*\//, "", filename); \
+		printf "${FILESDIR}/%s|${WRKINSTBUNDLES}/%s\n", \
 		$$2, filename } }' $(PLIST_NORM)
 
 _PLIST_INSTALLED_DIRS_AR != \
@@ -272,6 +283,12 @@ ${_file:C/^.*\|//}: ${_file:C/\|.*$//}
 	@${INSTALL} -m 0644 -o 0 -g 0 ${_file:C/\|.*$//} `dirname ${_file:C/^.*\|//}`
 .endfor
 
+.for _file in ${_PLIST_INSTALLED_BUNDLES_AR}
+${_file:C/^.*\|//}: ${_file:C/\|.*$//}
+	@${ECHO_MSG} ">> Installing ${_file:C/^.*\|//}"
+	@${INSTALL} -m 0644 -o 0 -g 0 ${_file:C/\|.*$//} `dirname ${_file:C/^.*\|//}`
+.endfor
+
 .for _file in ${_PLIST_INSTALLED_DIRS_AR}
 ${_file:C/@.*$//}:
 	@${ECHO_MSG} ">> Making directory ${_file:C/@.*$//}"
@@ -306,6 +323,9 @@ _install-dirs-and-files:
 .for _f in ${_PLIST_INSTALLED_PATCHES_AR}
 	@cd ${.CURDIR} && exec ${MAKE} ${_f:C/^.*\|//} PROFILE=${PROFILE}
 .endfor
+.for _f in ${_PLIST_INSTALLED_BUNDLES_AR}
+	@cd ${.CURDIR} && exec ${MAKE} ${_f:C/^.*\|//} PROFILE=${PROFILE}
+.endfor
 	@cd ${.CURDIR} && exec ${MAKE} ${WRKINST}/site.profile PROFILE=${PROFILE}
 	@cd ${.CURDIR} && exec ${MAKE} ${WRKINST}/install.site PROFILE=${PROFILE}
 .for _f in ${_PACKAGE_SCRIPTS}
@@ -333,7 +353,7 @@ ${PACKAGE_REPOSITORY}:
 	@${RM} -rf ${PACKAGE_REPOSITORY}
 	@${MKDIR} -p ${PACKAGE_REPOSITORY}
 
-${_PACKAGE}: ${_PLIST_INSTALLED_FILES_AR:C/^.*\|//:C/@.*$//} ${_PLIST_INSTALLED_PATCHES_AR:C/^.*\|//} ${_EXTRA_INSTALLED_FILES}
+${_PACKAGE}: ${_PLIST_INSTALLED_FILES_AR:C/^.*\|//:C/@.*$//} ${_PLIST_INSTALLED_PATCHES_AR:C/^.*\|//} ${_PLIST_INSTALLED_BUNDLES_AR:C/^.*\|//} ${_EXTRA_INSTALLED_FILES}
 	@${ECHO_MSG} ">> Creating site install set ${_PACKAGE}"
 	@cd ${WRKINST} && ${TAR} cpfz ${_PACKAGE} .
 

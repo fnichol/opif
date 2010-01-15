@@ -38,8 +38,22 @@ i_applyPatchfiles()
 }
 
 
+i_installBundles()
+{
+	infoMsg "Installing bundles ..."
+
+	local bundles="`$Find ${MNTROOT}/tmp/bundles -type f -name *.tgz | \
+		$Xargs`"
+
+	for bundle in $bundles; do
+		installBundle $bundle
+	done
+}
+
+
 core_stage1()
 {
+	i_installBundles
 	i_applyPatchfiles
 }
 
